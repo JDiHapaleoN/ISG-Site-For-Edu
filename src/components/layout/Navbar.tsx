@@ -33,15 +33,17 @@ export default function Navbar() {
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
             setUser(session?.user ?? null);
-            router.refresh();
+            // Optimization: Remove router.refresh() from here. 
+            // It causes heavy re-renders across the whole layout which can cause button lag.
+            // Supabase state is enough for most UI updates.
         });
 
         return () => subscription.unsubscribe();
-    }, [supabase, router]);
+    }, [supabase]);
 
     const handleSignOut = async () => {
         await supabase.auth.signOut();
-        router.refresh();
+        router.refresh(); // Hard refresh only on explicit action
         router.push("/login");
     };
 
