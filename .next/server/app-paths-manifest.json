@@ -1,0 +1,10 @@
+{
+  "/page": "app/page.js",
+  "/reader/page": "app/reader/page.js",
+  "/math/page": "app/math/page.js",
+  "/api/srs/due/route": "app/api/srs/due/route.js",
+  "/api/translate/route": "app/api/translate/route.js",
+  "/practice/page": "app/practice/page.js",
+  "/shadowing/page": "app/shadowing/page.js",
+  "/review/page": "app/review/page.js"
+}

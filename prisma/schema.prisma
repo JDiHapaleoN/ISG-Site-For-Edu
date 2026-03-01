@@ -1,0 +1,209 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  name          String?
+  targetIelts   Float?    
+  targetTestDaf String?   
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Isolated Relations mapping
+  englishDecks    EnglishDeck[]
+  germanDecks     GermanDeck[]
+  mathLogs        MathLog[]
+  englishSessions EnglishSession[]
+  germanSessions  GermanSession[]
+  mathSessions    MathSession[]
+  practiceLogs    PracticeLog[]
+}
+
+// ============================================
+// ENGLISH MODULE (L2: English, L1: Russian)
+// ============================================
+
+model EnglishDeck {
+  id          String   @id @default(uuid())
+  userId      String
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  words       EnglishWord[]
+}
+
+model EnglishWord {
+  id             String   @id @default(uuid())
+  userId         String
+  deckId         String
+  term           String   // English word
+  translation    String?  // Russian translation
+  transcription  String?  // IPA
+  context        String?  // English sentence
+  contextTranslation String? // Russian translation of context
+  mnemonic       String?  // Russian mnemonic
+  partOfSpeech   String?
+  clozeSentence  String?
+
+  // SRS (SuperMemo-2) tracking
+  nextReview         DateTime  @default(now())
+  interval           Int       @default(0)   // Days until next review
+  easiness           Float     @default(2.5) // SM-2 Easiness factor
+  srsStep            Int       @default(0)   // Exact number of successful reps
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  deck           EnglishDeck @relation(fields: [deckId], references: [id], onDelete: Cascade)
+}
+
+model EnglishSession {
+  id           String   @id @default(uuid())
+  userId       String
+  startTime    DateTime @default(now())
+  endTime      DateTime?
+  durationMins Int?     
+  focusScore   Int?
+  
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ============================================
+// GERMAN MODULE (L2: German, L1: Russian)
+// ============================================
+
+model GermanDeck {
+  id          String   @id @default(uuid())
+  userId      String
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  words       GermanWord[]
+}
+
+model GermanWord {
+  id             String   @id @default(uuid())
+  userId         String
+  deckId         String
+  term           String   // German word
+  article        String?  // der/die/das
+  pluralForm     String?  // Plural ending/form
+  translation    String?  // Russian translation
+  context        String?  // German sentence
+  contextTranslation String? // Russian translation of context
+  mnemonic       String?  // Russian mnemonic
+  partOfSpeech   String?
+  clozeSentence  String?
+
+  // SRS (SuperMemo-2) tracking
+  nextReview         DateTime  @default(now())
+  interval           Int       @default(0)
+  easiness           Float     @default(2.5)
+  srsStep            Int       @default(0)
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  deck           GermanDeck @relation(fields: [deckId], references: [id], onDelete: Cascade)
+}
+
+model GermanSession {
+  id           String   @id @default(uuid())
+  userId       String
+  startTime    DateTime @default(now())
+  endTime      DateTime?
+  durationMins Int?     
+  focusScore   Int?
+  
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ============================================
+// MATHEMATICS MODULE (L1: Russian Only)
+// ============================================
+
+model MathLog {
+  id          String   @id @default(uuid())
+  userId      String
+  topic       String   // e.g., "Математический анализ", "Линейная алгебра"
+  theorem     String?
+  problem     String   // LaTeX representation 
+  solution    String   // LaTeX step-by-step
+  errorType   String   // e.g., "Вычислительная ошибка", "Концептуальная"
+  recurring   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model MathSession {
+  id           String   @id @default(uuid())
+  userId       String
+  startTime    DateTime @default(now())
+  endTime      DateTime?
+  durationMins Int?     
+  focusScore   Int?
+  
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ============================================
+// SHARED UTILITIES
+// ============================================
+
+model PracticeLog {
+  id          String   @id @default(uuid())
+  userId      String
+  module      String   // 'english' | 'german' | 'math'
+  type        String   // 'writing_ielts' | 'feynman_explanation'
+  topic       String
+  userInput   String   // Text or transcription submitted
+  aiFeedback  String   // JSON or text from OpenAI
+  score       Float?   // Band score or internal grade
+  timeSpentMs Int?
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model MathTerm {
+  id           String   @id @default(uuid())
+  termRu       String
+  termEn       String
+  termDe       String
+  definitionRu String
+  formula      String?
+  createdAt    DateTime @default(now())
+}
+
+model Algorithm {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  formula     String?
+  steps       AlgorithmStep[]
+  createdAt   DateTime @default(now())
+}
+
+model AlgorithmStep {
+  id          String    @id @default(uuid())
+  algorithmId String
+  text        String
+  math        String?
+  order       Int
+  algorithm   Algorithm @relation(fields: [algorithmId], references: [id], onDelete: Cascade)
+}
