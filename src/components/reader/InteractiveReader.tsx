@@ -37,8 +37,8 @@ export default function InteractiveReader({ initialText, module }: ReaderProps) 
     const [translationError, setTranslationError] = useState<string | null>(null);
 
     // Simple tokenization retaining spaces/punctuation in the array for rendering
-    // We use regex to split keeping word characters grouped
-    const words = customText.split(/(\b[^\sa-zA-ZÀ-ÿ]+\b|\s+|\b)/).filter(Boolean);
+    // We use regex to split keeping word characters grouped, supporting Unicode (Umlauts etc)
+    const words = customText.split(/([^\p{L}\p{N}]+)/u).filter(Boolean);
 
     const handleWordClick = async (chunk: string, index: number) => {
         if (isHighlightMode) {
@@ -52,7 +52,7 @@ export default function InteractiveReader({ initialText, module }: ReaderProps) 
         }
 
         const cleanWord = chunk.trim().replace(/[.,!?;()":]/g, "");
-        if (!cleanWord || !/[a-zA-ZÀ-ÿ]/.test(cleanWord)) return;
+        if (!cleanWord || !/[\p{L}\p{N}]/u.test(cleanWord)) return;
 
         setIsTranslating(true);
         setTranslationError(null);
@@ -164,7 +164,7 @@ export default function InteractiveReader({ initialText, module }: ReaderProps) 
                 ) : (
                     <div className="text-xl leading-[1.8] text-zinc-800 dark:text-zinc-200 font-serif tracking-wide select-text">
                         {words.map((chunk, i) => {
-                            const isWord = /[a-zA-ZÀ-ÿ]/.test(chunk);
+                            const isWord = /[\p{L}\p{N}]/u.test(chunk);
                             const isHighlighted = highlights.has(i);
                             if (!isWord) return <span key={i} className="whitespace-pre-wrap">{chunk}</span>;
 

@@ -1,10 +1,15 @@
 {
-  "/page": "app/page.js",
-  "/reader/page": "app/reader/page.js",
-  "/math/page": "app/math/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/api/srs/review/route": "app/api/srs/review/route.js",
+  "/api/practice/feynman/route": "app/api/practice/feynman/route.js",
+  "/api/practice/writing/route": "app/api/practice/writing/route.js",
+  "/api/srs/add/route": "app/api/srs/add/route.js",
   "/api/srs/due/route": "app/api/srs/due/route.js",
   "/api/translate/route": "app/api/translate/route.js",
+  "/page": "app/page.js",
+  "/reader/page": "app/reader/page.js",
   "/practice/page": "app/practice/page.js",
+  "/review/page": "app/review/page.js",
   "/shadowing/page": "app/shadowing/page.js",
-  "/review/page": "app/review/page.js"
+  "/math/page": "app/math/page.js"
 }
