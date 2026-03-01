@@ -1,17 +1,17 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import Navbar from "@/components/layout/Navbar";
-import GlobalTimer from "@/components/layout/GlobalTimer";
+import NavbarWrapper from "@/components/layout/NavbarWrapper";
 import { TimerProvider } from "@/hooks/useTimer";
 import { ThemeProvider } from "@/components/ThemeProvider";
 // Global styles
 import "./globals.css";
+import { BRAND_NAME, BRAND_DESCRIPTION } from "@/lib/constants";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-    title: "Antigravity LMS",
-    description: "Advanced Learning Management System for University Admissions",
+    title: BRAND_NAME,
+    description: BRAND_DESCRIPTION,
 };
 
 export default function RootLayout({
@@ -24,8 +24,7 @@ export default function RootLayout({
             <body className={`${inter.className} bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50`}>
                 <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
                     <TimerProvider>
-                        <Navbar />
-                        <GlobalTimer />
+                        <NavbarWrapper />
                         <div className="pt-16 min-h-screen flex flex-col">
                             {children}
                         </div>
