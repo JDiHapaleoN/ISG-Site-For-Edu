@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
+import { ensurePrismaUser } from "@/lib/auth-sync";
 
 export async function POST(req: Request) {
     try {
@@ -9,16 +11,16 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Missing data or module" }, { status: 400 });
         }
 
-        // In a final app, userId would come from an auth session (e.g., Supabase Auth)
-        // For now, we find or create a dummy user
-        let user = await prisma.user.findFirst({ where: { email: "demo@antigravity.local" } });
+        const supabase = createClient();
+        const { data: { user: supabaseUser } } = await supabase.auth.getUser();
+
+        if (!supabaseUser) {
+            return NextResponse.json({ error: "Auth required" }, { status: 401 });
+        }
+
+        const user = await ensurePrismaUser(supabaseUser);
         if (!user) {
-            user = await prisma.user.create({
-                data: {
-                    email: "demo@antigravity.local",
-                    name: "Demo User",
-                },
-            });
+            return NextResponse.json({ error: "User sync failed" }, { status: 500 });
         }
 
         if (module === "english") {

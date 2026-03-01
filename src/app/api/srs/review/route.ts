@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
+import { ensurePrismaUser } from "@/lib/auth-sync";
 
 // SuperMemo-2 Algorithm Helper
 // Takes current SRS stats and a quality rating (0-5), returns new stats
@@ -49,6 +49,18 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Missing or invalid required fields" }, { status: 400 });
         }
 
+        const supabase = createClient();
+        const { data: { user: supabaseUser } } = await supabase.auth.getUser();
+
+        if (!supabaseUser) {
+            return NextResponse.json({ error: "Auth required" }, { status: 401 });
+        }
+
+        const user = await ensurePrismaUser(supabaseUser);
+        if (!user) {
+            return NextResponse.json({ error: "User sync failed" }, { status: 500 });
+        }
+
         if (quality < 0 || quality > 5) {
             return NextResponse.json({ error: "Quality must be between 0 and 5" }, { status: 400 });
         }
@@ -59,7 +71,7 @@ export async function POST(req: Request) {
         // 1. Fetch current word data
         // @ts-ignore - Dynamic model access
         const word = await dbModel.findUnique({
-            where: { id: wordId },
+            where: { id: wordId, userId: user.id },
         });
 
         if (!word) {
