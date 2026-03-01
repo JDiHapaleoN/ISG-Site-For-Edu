@@ -1,16 +1,16 @@
 "use client";
 
 import { useTimer } from "@/hooks/useTimer";
-import { Play, Pause, Coffee, BookOpen, ChevronRight, Maximize2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Pause, Play, Maximize2, Coffee, BookOpen } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 
 export default function GlobalTimer() {
-    const { state, subject, timeLeft, toggleTimer } = useTimer();
+    const { state, timeLeft, subject, toggleTimer } = useTimer();
     const pathname = usePathname();
     const router = useRouter();
 
-    // Show on all pages if started (not idle)
+    // Show if not idle (visible when studying, resting, or paused)
     if (state === "idle") {
         return null;
     }
@@ -23,6 +23,7 @@ export default function GlobalTimer() {
 
     const getSubjectColorBg = () => {
         if (state === "resting") return "bg-emerald-500 text-white";
+        if (state === "paused") return "bg-zinc-500 text-white";
         switch (subject) {
             case "english": return "bg-indigo-600 text-white";
             case "german": return "bg-pink-600 text-white";
@@ -33,6 +34,7 @@ export default function GlobalTimer() {
 
     const getSubjectLabel = () => {
         if (state === "resting") return "Отдых";
+        if (state === "paused") return "Пауза";
         switch (subject) {
             case "english": return "Англ";
             case "german": return "Нем";
@@ -44,17 +46,17 @@ export default function GlobalTimer() {
     return (
         <AnimatePresence>
             <motion.div
-                initial={{ opacity: 0, x: 50, scale: 0.8 }}
-                animate={{ opacity: 1, x: 0, scale: 1 }}
-                exit={{ opacity: 0, x: 50, scale: 0.8 }}
-                className="fixed bottom-6 right-6 z-[60] pointer-events-auto group"
+                initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 20, scale: 0.95 }}
+                className="fixed bottom-6 right-6 z-[60] pointer-events-auto"
             >
                 {/* Floating Widget */}
-                <div className={`relative flex items-center gap-3 p-1 pl-4 rounded-3xl border border-white/20 backdrop-blur-xl shadow-2xl ${getSubjectColorBg()} transition-all duration-300 hover:pr-4`}>
+                <div className={`relative flex items-center gap-3 p-1.5 pl-4 rounded-2xl border border-white/20 backdrop-blur-xl shadow-2xl ${getSubjectColorBg()} transition-all duration-300`}>
 
                     {/* Status Info */}
                     <div className="flex flex-col -space-y-1">
-                        <span className="text-[10px] font-black uppercase tracking-widest opacity-70">
+                        <span className="text-[10px] font-black uppercase tracking-widest opacity-80">
                             {getSubjectLabel()}
                         </span>
                         <span className="font-mono text-lg font-black tracking-tighter">
@@ -65,8 +67,11 @@ export default function GlobalTimer() {
                     {/* Controls */}
                     <div className="flex items-center gap-1">
                         <button
-                            onClick={toggleTimer}
-                            className="w-10 h-10 flex items-center justify-center rounded-2xl bg-white/20 hover:bg-white/30 transition-colors"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                toggleTimer();
+                            }}
+                            className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/20 hover:bg-white/30 transition-colors"
                             title={state === "studying" ? "Пауза" : "Старт"}
                         >
                             {state === "studying" || state === "resting" ? (
@@ -79,21 +84,13 @@ export default function GlobalTimer() {
                         {pathname !== "/" && (
                             <button
                                 onClick={() => router.push("/")}
-                                className="w-10 h-10 flex items-center justify-center rounded-2xl bg-black/10 hover:bg-black/20 transition-colors"
+                                className="w-10 h-10 flex items-center justify-center rounded-xl bg-black/10 hover:bg-black/20 transition-colors"
                                 title="Открыть таймер"
                             >
-                                <Maximize2 className="w-4 h-4" />
+                                <Maximize2 className="w-4 h-4 text-white" />
                             </button>
                         )}
                     </div>
-
-                    {/* Active Pulse */}
-                    {state !== "idle" && (
-                        <div className="absolute -top-1 -right-1 w-3 h-3">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
-                        </div>
-                    )}
                 </div>
             </motion.div>
         </AnimatePresence>
