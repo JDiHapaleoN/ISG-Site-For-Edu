@@ -136,7 +136,7 @@ export default function InteractiveReader({ initialText, module }: ReaderProps) 
                             </button>
                         )}
                         <button
-                            onClick={() => {
+                            onClick={async () => {
                                 if (isEditing) {
                                     // Auto-correct spacing and clean up text
                                     const cleaned = customText
@@ -144,6 +144,17 @@ export default function InteractiveReader({ initialText, module }: ReaderProps) 
                                         .replace(/[ \t]+/g, ' ')    // collapse spaces
                                         .trim();
                                     setCustomText(cleaned);
+
+                                    // Persist active text
+                                    try {
+                                        await fetch('/api/reader/persistence', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ text: cleaned, module })
+                                        });
+                                    } catch (e) {
+                                        console.error("Failed to persist reader text", e);
+                                    }
                                 }
                                 setIsEditing(!isEditing);
                             }}
@@ -153,6 +164,35 @@ export default function InteractiveReader({ initialText, module }: ReaderProps) 
                         </button>
                     </div>
                 </div>
+
+                {!isEditing && customText && (
+                    <div className="mb-4 flex gap-2">
+                        <button
+                            onClick={async () => {
+                                setIsAdding(true);
+                                try {
+                                    const title = customText.substring(0, 30).trim() + "...";
+                                    const res = await fetch('/api/reader/save', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ title, content: customText, module })
+                                    });
+                                    if (res.ok) {
+                                        alert("Текст сохранен в вашем профиле! ✨");
+                                    }
+                                } catch (e) {
+                                    alert("Ошибка при сохранении");
+                                } finally {
+                                    setIsAdding(false);
+                                }
+                            }}
+                            className="text-xs font-bold px-3 py-1.5 bg-indigo-500/10 text-indigo-500 rounded-lg hover:bg-indigo-500/20 transition-all border border-indigo-500/20 flex items-center gap-2"
+                        >
+                            {isAdding ? <Loader2 className="w-3 h-3 animate-spin" /> : <PlusCircle className="w-3 h-3" />}
+                            Сохранить в профиль
+                        </button>
+                    </div>
+                )}
 
                 {isEditing ? (
                     <textarea

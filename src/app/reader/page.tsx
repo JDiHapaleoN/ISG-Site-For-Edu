@@ -1,4 +1,7 @@
 import InteractiveReader from "@/components/reader/InteractiveReader";
+import { createClient } from "@/lib/supabase/server";
+import { prisma } from "@/lib/prisma";
+import { ensurePrismaUser } from "@/lib/auth-sync";
 
 export const metadata = {
     title: "Умный текст | Antigravity LMS",
@@ -13,13 +16,30 @@ const SAMPLE_TEXT_ENGLISH = `Artificial intelligence has made enormous progress 
 
 It is important that we deal intensively with these topics in order to shape a sustainable and just future.`;
 
-export default function ReaderPage({
+export default async function ReaderPage({
     searchParams,
 }: {
     searchParams: { lang?: string };
 }) {
-    const module = searchParams.lang === "english" ? "english" : "german";
-    const text = module === "german" ? SAMPLE_TEXT_GERMAN : SAMPLE_TEXT_ENGLISH;
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    let persistedText = "";
+    let persistedModule = searchParams.lang === "english" ? "english" : "german";
+
+    if (user) {
+        await ensurePrismaUser(user);
+        const dbUser = await prisma.user.findUnique({
+            where: { email: user.email! }
+        });
+        if (dbUser?.activeReaderText) {
+            persistedText = dbUser.activeReaderText;
+            persistedModule = (dbUser.activeReaderModule as "english" | "german") || persistedModule;
+        }
+    }
+
+    const module = persistedModule as "english" | "german";
+    const text = persistedText || (module === "german" ? SAMPLE_TEXT_GERMAN : SAMPLE_TEXT_ENGLISH);
 
     return (
         <main className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-6">
@@ -33,7 +53,6 @@ export default function ReaderPage({
                     </p>
                 </div>
 
-                {/* Gateway toggle for demo purposes */}
                 <div className="flex gap-2 p-1 bg-zinc-200 dark:bg-zinc-800 rounded-lg">
                     <a
                         href="?lang=german"
