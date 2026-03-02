@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { BookOpen, Volume2, PlusCircle, Check, Loader2, Highlighter } from "lucide-react";
+import { BookOpen, Volume2, PlusCircle, Check, Loader2, Highlighter, X } from "lucide-react";
 
 export interface WordData {
     term: string;
@@ -114,19 +114,19 @@ export default function InteractiveReader({ initialText, module }: ReaderProps) 
     };
 
     return (
-        <div className="flex flex-col md:flex-row gap-6 w-full max-w-6xl mx-auto h-[calc(100vh-120px)] p-4">
+        <div className="flex flex-col lg:flex-row gap-4 md:gap-6 w-full max-w-6xl mx-auto min-h-[calc(100vh-80px)] lg:h-[calc(100vh-120px)] p-2 md:p-4">
             {/* Reader Pane */}
-            <div className="flex-1 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-xl border border-zinc-200 dark:border-zinc-800 rounded-3xl p-8 overflow-y-auto shadow-2xl transition-all flex flex-col">
-                <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-2xl font-bold flex items-center gap-3 font-sans">
-                        <BookOpen className="w-6 h-6 text-indigo-500" />
-                        Текст ({module === 'german' ? 'Немецкий' : 'Английский'})
+            <div className="flex-1 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-xl border border-zinc-200 dark:border-zinc-800 rounded-3xl p-4 md:p-8 overflow-y-auto shadow-2xl transition-all flex flex-col min-h-[400px]">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                    <h2 className="text-xl md:text-2xl font-bold flex items-center gap-3 font-sans">
+                        <BookOpen className="w-5 h-5 md:w-6 md:h-6 text-indigo-500" />
+                        Текст ({module === 'german' ? 'DE' : 'EN'})
                     </h2>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
                         {!isEditing && (
                             <button
                                 onClick={() => setIsHighlightMode(!isHighlightMode)}
-                                className={`p-2 rounded-xl transition-all ${isHighlightMode
+                                className={`p-2.5 rounded-xl transition-all ${isHighlightMode
                                     ? 'bg-yellow-400 text-yellow-950 shadow-inner'
                                     : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100'
                                     }`}
@@ -138,14 +138,11 @@ export default function InteractiveReader({ initialText, module }: ReaderProps) 
                         <button
                             onClick={async () => {
                                 if (isEditing) {
-                                    // Auto-correct spacing and clean up text
                                     const cleaned = customText
-                                        .replace(/\n{3,}/g, '\n\n') // Max 2 newlines
-                                        .replace(/[ \t]+/g, ' ')    // collapse spaces
+                                        .replace(/\n{3,}/g, '\n\n')
+                                        .replace(/[ \t]+/g, ' ')
                                         .trim();
                                     setCustomText(cleaned);
-
-                                    // Persist active text
                                     try {
                                         await fetch('/api/reader/persistence', {
                                             method: 'POST',
@@ -158,9 +155,9 @@ export default function InteractiveReader({ initialText, module }: ReaderProps) 
                                 }
                                 setIsEditing(!isEditing);
                             }}
-                            className="text-sm font-bold px-4 py-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-xl hover:opacity-90 transition-opacity font-sans"
+                            className="flex-1 sm:flex-none text-xs md:text-sm font-bold px-4 py-2.5 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-xl hover:opacity-90 transition-opacity font-sans"
                         >
-                            {isEditing ? 'Готово (Читать)' : 'Вставить свой текст'}
+                            {isEditing ? 'Готово (Читать)' : 'Свой текст'}
                         </button>
                     </div>
                 </div>
@@ -186,7 +183,7 @@ export default function InteractiveReader({ initialText, module }: ReaderProps) 
                                     setIsAdding(false);
                                 }
                             }}
-                            className="text-xs font-bold px-3 py-1.5 bg-indigo-500/10 text-indigo-500 rounded-lg hover:bg-indigo-500/20 transition-all border border-indigo-500/20 flex items-center gap-2"
+                            className="text-[10px] md:text-xs font-bold px-3 py-1.5 bg-indigo-500/10 text-indigo-500 rounded-lg hover:bg-indigo-500/20 transition-all border border-indigo-500/20 flex items-center gap-2"
                         >
                             {isAdding ? <Loader2 className="w-3 h-3 animate-spin" /> : <PlusCircle className="w-3 h-3" />}
                             Сохранить в профиль
@@ -196,13 +193,13 @@ export default function InteractiveReader({ initialText, module }: ReaderProps) 
 
                 {isEditing ? (
                     <textarea
-                        className="w-full flex-1 min-h-[400px] p-4 bg-white/80 dark:bg-zinc-950/80 border border-zinc-200 dark:border-zinc-800 rounded-2xl resize-none font-serif text-lg leading-loose focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full flex-1 min-h-[300px] md:min-h-[400px] p-4 bg-white/80 dark:bg-zinc-950/80 border border-zinc-200 dark:border-zinc-800 rounded-2xl resize-none font-serif text-base md:text-lg leading-loose focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         value={customText}
                         onChange={(e) => setCustomText(e.target.value)}
                         placeholder="Вставьте сюда свой текст для изучения..."
                     />
                 ) : (
-                    <div className="text-xl leading-[1.8] text-zinc-800 dark:text-zinc-200 font-serif tracking-wide select-text">
+                    <div className="text-lg md:text-xl leading-[1.8] text-zinc-800 dark:text-zinc-200 font-serif tracking-wide select-text pb-20 lg:pb-0">
                         {words.map((chunk, i) => {
                             const isWord = /[\p{L}\p{N}]/u.test(chunk);
                             const isHighlighted = highlights.has(i);
@@ -211,6 +208,7 @@ export default function InteractiveReader({ initialText, module }: ReaderProps) 
                             return (
                                 <motion.span
                                     key={i}
+                                    whileTap={{ scale: 0.95 }}
                                     whileHover={{ backgroundColor: isHighlightMode ? "rgba(250, 204, 21, 0.4)" : "rgba(99, 102, 241, 0.2)", borderRadius: "4px" }}
                                     className={`cursor-pointer transition-all px-0.5 mx-[-0.125rem] rounded-[4px] ${isHighlighted
                                         ? "bg-yellow-200 dark:bg-yellow-900/50 text-yellow-950 dark:text-yellow-100 shadow-[0_0_0_1px_rgba(250,204,21,0.5)]"
@@ -230,20 +228,23 @@ export default function InteractiveReader({ initialText, module }: ReaderProps) 
             <AnimatePresence>
                 {(selectedWord || isTranslating || translationError) && (
                     <motion.div
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: 20 }}
-                        className="w-full md:w-80 h-fit bg-white/80 dark:bg-zinc-900/80 backdrop-blur-2xl border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-2xl flex flex-col gap-6 sticky top-4 font-sans"
+                        initial={{ opacity: 0, y: 100, x: 0 }}
+                        animate={{ opacity: 1, y: 0, x: 0 }}
+                        exit={{ opacity: 0, y: 100, x: 0 }}
+                        className="fixed bottom-0 left-0 right-0 z-[60] lg:relative lg:bottom-auto lg:left-auto lg:right-auto lg:z-10 lg:w-80 h-fit max-h-[80vh] bg-white dark:bg-zinc-900 lg:bg-white/80 lg:dark:bg-zinc-900/80 backdrop-blur-2xl border-t lg:border border-zinc-200 dark:border-zinc-800 rounded-t-[2.5rem] lg:rounded-3xl p-6 shadow-[0_-20px_50px_-12px_rgba(0,0,0,0.3)] lg:shadow-2xl flex flex-col gap-4 md:gap-6 overflow-y-auto lg:sticky lg:top-20 font-sans"
                     >
+                        {/* Drag Handle for Mobile */}
+                        <div className="w-12 h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-full mx-auto mb-2 lg:hidden flex-shrink-0" />
+
                         {isTranslating ? (
-                            <div className="flex flex-col items-center justify-center py-20 gap-4 text-zinc-500">
+                            <div className="flex flex-col items-center justify-center py-10 lg:py-20 gap-4 text-zinc-500">
                                 <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
                                 <p className="text-sm font-medium animate-pulse">Анализ контекста...</p>
                             </div>
                         ) : translationError ? (
-                            <div className="flex flex-col items-center justify-center py-10 gap-4 text-center">
+                            <div className="flex flex-col items-center justify-center py-8 lg:py-10 gap-4 text-center">
                                 <div className="w-12 h-12 bg-rose-100 dark:bg-rose-950/30 rounded-full flex items-center justify-center text-rose-500">
-                                    <PlusCircle className="w-6 h-6 rotate-45" />
+                                    <X className="w-6 h-6 rotate-45" />
                                 </div>
                                 <p className="text-sm font-medium text-rose-600 dark:text-rose-400">{translationError}</p>
                                 <button
@@ -251,7 +252,7 @@ export default function InteractiveReader({ initialText, module }: ReaderProps) 
                                         setTranslationError(null);
                                         setSelectedWord(null);
                                     }}
-                                    className="text-xs font-bold text-zinc-500 hover:text-zinc-900 underline"
+                                    className="text-xs font-bold text-zinc-500 hover:text-zinc-900 underline px-4 py-2"
                                 >
                                     Закрыть
                                 </button>
@@ -259,64 +260,67 @@ export default function InteractiveReader({ initialText, module }: ReaderProps) 
                         ) : selectedWord ? (
                             <>
                                 <div className="flex justify-between items-start">
-                                    <div>
-                                        <div className="flex items-center gap-2">
-                                            {selectedWord.article && (
-                                                <span className="text-pink-500 font-bold text-xl">{selectedWord.article}</span>
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            {selectedWord?.article && (
+                                                <span className="text-pink-500 font-bold text-lg md:text-xl">{selectedWord.article}</span>
                                             )}
-                                            <h3 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-purple-500">
+                                            <h3 className="text-2xl md:text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-purple-500 truncate max-w-[200px] lg:max-w-full">
                                                 {selectedWord.term}
                                             </h3>
                                         </div>
 
-                                        <div className="flex items-center gap-2 mt-1">
-                                            {selectedWord.transcription && (
+                                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                            {selectedWord?.transcription && (
                                                 <p className="text-zinc-500 dark:text-zinc-400 font-mono text-sm">
                                                     [{selectedWord.transcription}]
                                                 </p>
                                             )}
-                                            {selectedWord.pluralForm && (
-                                                <p className="text-zinc-500 dark:text-zinc-400 font-medium text-sm">
-                                                    Мн.ч. {selectedWord.pluralForm}
-                                                </p>
-                                            )}
-                                            {selectedWord.partOfSpeech && (
-                                                <span className="px-2 py-0.5 bg-zinc-200 dark:bg-zinc-800 rounded-full text-xs text-zinc-500 dark:text-zinc-400 font-medium uppercase">
+                                            {selectedWord?.partOfSpeech && (
+                                                <span className="px-2 py-0.5 bg-zinc-200 dark:bg-zinc-800 rounded-full text-[10px] text-zinc-500 dark:text-zinc-400 font-black uppercase">
                                                     {selectedWord.partOfSpeech}
                                                 </span>
                                             )}
                                         </div>
                                     </div>
-                                    <button className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors">
-                                        <Volume2 className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
-                                    </button>
+                                    <div className="flex items-center gap-1">
+                                        <button className="p-2.5 bg-zinc-100 dark:bg-zinc-800 rounded-xl text-zinc-600 dark:text-zinc-400 hover:text-indigo-500 transition-colors">
+                                            <Volume2 className="w-5 h-5" />
+                                        </button>
+                                        <button
+                                            onClick={() => setSelectedWord(null)}
+                                            className="lg:hidden p-2.5 bg-zinc-100 dark:bg-zinc-800 rounded-xl text-zinc-400"
+                                        >
+                                            <X className="w-5 h-5" />
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div>
-                                    <p className="text-sm text-zinc-500 dark:text-zinc-400 uppercase tracking-wider font-semibold mb-2">
+                                    <p className="text-[10px] text-zinc-400 font-black uppercase tracking-widest mb-1.5 lg:mb-2">
                                         Перевод
                                     </p>
-                                    <p className="text-xl font-medium dark:text-zinc-100">
+                                    <p className="text-lg md:text-xl font-bold dark:text-zinc-100 leading-tight">
                                         {selectedWord.translation}
                                     </p>
                                 </div>
 
-                                {selectedWord.mnemonic && (
-                                    <div className="bg-amber-50 dark:bg-amber-950/30 p-3 rounded-xl border border-amber-100 dark:border-amber-900/50">
-                                        <p className="text-xs text-amber-800 dark:text-amber-200 font-medium mb-1">💡 Мнемоника</p>
-                                        <p className="text-sm text-amber-900 dark:text-amber-100">
+                                {selectedWord?.mnemonic && (
+                                    <div className="bg-amber-50 dark:bg-amber-950/30 p-3 rounded-2xl border border-amber-100 dark:border-amber-900/50">
+                                        <p className="text-[10px] text-amber-800 dark:text-amber-200 font-black uppercase tracking-widest mb-1">💡 Мнемоника</p>
+                                        <p className="text-sm text-amber-900 dark:text-amber-100 leading-relaxed font-medium">
                                             {selectedWord.mnemonic}
                                         </p>
                                     </div>
                                 )}
 
-                                {selectedWord.contextTranslation && (
+                                {selectedWord?.contextTranslation && (
                                     <div className="bg-indigo-50 dark:bg-indigo-950/30 p-4 rounded-2xl border border-indigo-100 dark:border-indigo-900/50 flex flex-col gap-2">
-                                        <p className="text-sm text-indigo-900 dark:text-indigo-200 font-serif">
+                                        <p className="text-sm text-indigo-900 dark:text-indigo-200 font-serif italic leading-relaxed">
                                             "{selectedWord.context}"
                                         </p>
                                         <div className="w-full h-px border-t border-dashed border-indigo-200 dark:border-indigo-800" />
-                                        <p className="text-sm text-indigo-800 dark:text-indigo-300 italic">
+                                        <p className="text-sm font-bold text-indigo-700 dark:text-indigo-300">
                                             {selectedWord.contextTranslation}
                                         </p>
                                     </div>
@@ -325,8 +329,8 @@ export default function InteractiveReader({ initialText, module }: ReaderProps) 
                                 <button
                                     onClick={handleAddToSRS}
                                     disabled={selectedWord.isAdded || isAdding}
-                                    className={`mt-2 w-full py-3 px-4 rounded-2xl font-semibold flex items-center justify-center gap-2 transition-all ${selectedWord.isAdded
-                                        ? "bg-emerald-500 text-white"
+                                    className={`mt-auto lg:mt-2 w-full py-4 px-4 rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 transition-all ${selectedWord.isAdded
+                                        ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20"
                                         : "bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/30 disabled:opacity-50"
                                         }`}
                                 >
@@ -334,11 +338,11 @@ export default function InteractiveReader({ initialText, module }: ReaderProps) 
                                         <Loader2 className="w-5 h-5 animate-spin" />
                                     ) : selectedWord.isAdded ? (
                                         <>
-                                            <Check className="w-5 h-5" /> Уже в словаре
+                                            <Check className="w-5 h-5 stroke-[3]" /> Готово
                                         </>
                                     ) : (
                                         <>
-                                            <PlusCircle className="w-5 h-5" /> Добавить в словарь
+                                            <PlusCircle className="w-5 h-5 stroke-[3]" /> В словарь
                                         </>
                                     )}
                                 </button>

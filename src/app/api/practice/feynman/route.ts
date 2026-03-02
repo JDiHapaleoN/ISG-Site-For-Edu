@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { geminiModel } from "@/lib/gemini";
 import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
+import { ensurePrismaUser } from "@/lib/auth-sync";
 
 export async function POST(req: Request) {
     try {
@@ -54,12 +56,16 @@ Output ONLY a JSON object with this exact structure:
         const cleanJson = responseText.replace(/```json\n?|```/g, "").trim();
         const parsedResponse = JSON.parse(cleanJson);
 
-        // Save to DB
-        let user = await prisma.user.findFirst({ where: { email: "demo@antigravity.local" } });
+        const supabase = createClient();
+        const { data: { user: supabaseUser } } = await supabase.auth.getUser();
+
+        if (!supabaseUser) {
+            return NextResponse.json({ error: "Auth required" }, { status: 401 });
+        }
+
+        const user = await ensurePrismaUser(supabaseUser);
         if (!user) {
-            user = await prisma.user.create({
-                data: { email: "demo@antigravity.local", name: "Demo User" },
-            });
+            return NextResponse.json({ error: "User sync failed" }, { status: 500 });
         }
 
         let numericScore = parseFloat(String(parsedResponse.score).replace(/[^0-9.]/g, ''));
@@ -68,7 +74,7 @@ Output ONLY a JSON object with this exact structure:
         await prisma.practiceLog.create({
             data: {
                 userId: user.id,
-                module: "general", // or "math"/"english" if mapped
+                module: category.toLowerCase().includes('english') ? 'english' : category.toLowerCase().includes('german') ? 'german' : 'general',
                 type: "feynman",
                 topic: concept,
                 userInput: explanation,

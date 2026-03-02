@@ -1,6 +1,31 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+// Normalizes IP to ignore minor dynamic changes (last block for IPv4, last 4 blocks for IPv6)
+function normalizeIp(ip: string): string {
+    if (!ip) return '0.0.0.0';
+    if (ip.includes(':')) {
+        // IPv6
+        const parts = ip.split(':');
+        return parts.slice(0, 4).join(':') + '::/64';
+    }
+    // IPv4
+    const parts = ip.split('.');
+    if (parts.length === 4) {
+        return `${parts[0]}.${parts[1]}.${parts[2]}.0/24`;
+    }
+    return ip;
+}
+
+// Generate a fast hash of the IP using Web Crypto API and environment salt
+async function generateIpHash(normalizedIp: string): Promise<string> {
+    const salt = process.env.DATABASE_URL || 'default-salt-12495';
+    const text = new TextEncoder().encode(normalizedIp + salt);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', text);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 export async function middleware(request: NextRequest) {
     let supabaseResponse = NextResponse.next({
         request,
@@ -27,24 +52,54 @@ export async function middleware(request: NextRequest) {
         }
     )
 
-    // IMPORTANT: Avoid writing any logic between createServerClient and
-    // getUser(). A simple mistake could make it very hard to debug
-    // issues with users being randomly logged out.
+    const { data: { user } } = await supabase.auth.getUser()
 
-    const {
-        data: { user },
-    } = await supabase.auth.getUser()
+    // Protected Route Redirect Logic
+    const isAuthRoute = request.nextUrl.pathname.startsWith('/login') ||
+        request.nextUrl.pathname.startsWith('/register') ||
+        request.nextUrl.pathname.startsWith('/auth')
 
-    if (
-        !user &&
-        !request.nextUrl.pathname.startsWith('/login') &&
-        !request.nextUrl.pathname.startsWith('/register') &&
-        !request.nextUrl.pathname.startsWith('/auth')
-    ) {
-        // no user, potentially respond by redirecting the user to the login page
+    if (!user && !isAuthRoute) {
         const url = request.nextUrl.clone()
         url.pathname = '/login'
         return NextResponse.redirect(url)
+    }
+
+    // --- IP ANALYZER & SESSION PROTECTION ---
+    if (user) {
+        const rawIp = request.headers.get('x-forwarded-for') || request.ip || '127.0.0.1';
+        const normalizedIp = normalizeIp(rawIp.split(',')[0].trim());
+        const currentIpHash = await generateIpHash(normalizedIp);
+
+        const storedIpHash = request.cookies.get('sb-ip-lock')?.value;
+
+        if (!storedIpHash) {
+            // First time seeing this user session, lock it to their current normalized IP
+            supabaseResponse.cookies.set('sb-ip-lock', currentIpHash, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                path: '/',
+                maxAge: 60 * 60 * 24 * 30 // 30 days
+            });
+        } else if (storedIpHash !== currentIpHash) {
+            // IP has changed significantly (suspicious session hijack or totally new location)
+            // Log them out by removing Supabase auth cookies and the lock
+            console.warn(`[Suspicious Activity] IP Hash Mismatch for user ${user.id}. Forcing logout.`);
+            supabase.auth.signOut();
+
+            // Delete cookies in the response
+            request.cookies.getAll().forEach((cookie) => {
+                if (cookie.name.startsWith('sb-') || cookie.name === 'sb-ip-lock') {
+                    supabaseResponse.cookies.delete(cookie.name);
+                }
+            });
+
+            const url = request.nextUrl.clone()
+            url.pathname = '/login'
+            url.searchParams.set('reason', 'ip-changed')
+            return NextResponse.redirect(url)
+        }
     }
 
     return supabaseResponse
@@ -52,13 +107,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
     matcher: [
-        /*
-         * Match all request paths except for the ones starting with:
-         * - _next/static (static files)
-         * - _next/image (image optimization files)
-         * - favicon.ico (favicon file)
-         * Feel free to modify this pattern to include more paths.
-         */
         '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
     ],
 }

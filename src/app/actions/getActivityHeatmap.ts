@@ -1,32 +1,38 @@
 "use server";
 
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
 
 export async function getActivityHeatmapData() {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+        throw new Error("Unauthorized");
+    }
+
     const today = new Date();
     const past100Days = new Date();
     past100Days.setDate(today.getDate() - 100);
 
-    // We are fetching all logs for the MVP without user filtering,
-    // since auth isn't established yet.
-    const practiceLogs = await prisma.practiceLog.findMany({
-        where: { createdAt: { gte: past100Days } },
-        select: { createdAt: true }
-    });
-    const engSessions = await prisma.englishSession.findMany({
-        where: { startTime: { gte: past100Days } },
-        select: { startTime: true }
-    });
-    const gerSessions = await prisma.germanSession.findMany({
-        where: { startTime: { gte: past100Days } },
-        select: { startTime: true }
-    });
-    const mathSessions = await prisma.mathSession.findMany({
-        where: { startTime: { gte: past100Days } },
-        select: { startTime: true }
-    });
+    const [practiceLogs, engSessions, gerSessions, mathSessions] = await Promise.all([
+        prisma.practiceLog.findMany({
+            where: { userId: user.id, createdAt: { gte: past100Days } },
+            select: { createdAt: true }
+        }),
+        prisma.englishSession.findMany({
+            where: { userId: user.id, startTime: { gte: past100Days } },
+            select: { startTime: true }
+        }),
+        prisma.germanSession.findMany({
+            where: { userId: user.id, startTime: { gte: past100Days } },
+            select: { startTime: true }
+        }),
+        prisma.mathSession.findMany({
+            where: { userId: user.id, startTime: { gte: past100Days } },
+            select: { startTime: true }
+        })
+    ]);
 
     const allDates = [
         ...practiceLogs.map(l => l.createdAt),

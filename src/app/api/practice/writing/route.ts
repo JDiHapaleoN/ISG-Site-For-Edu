@@ -2,9 +2,24 @@ import { NextResponse } from "next/server";
 import { geminiModel } from "@/lib/gemini";
 import { prisma } from "@/lib/prisma";
 
+import { createClient } from "@/lib/supabase/server";
+import { ensurePrismaUser } from "@/lib/auth-sync";
+
 export async function POST(req: Request) {
   try {
     const { prompt, language, text, type } = await req.json();
+
+    const supabase = createClient();
+    const { data: { user: supabaseUser } } = await supabase.auth.getUser();
+
+    if (!supabaseUser) {
+      return NextResponse.json({ error: "Auth required" }, { status: 401 });
+    }
+
+    const user = await ensurePrismaUser(supabaseUser);
+    if (!user) {
+      return NextResponse.json({ error: "User sync failed" }, { status: 500 });
+    }
 
     if (!prompt || !language || !text || !type) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -62,13 +77,7 @@ Output ONLY a JSON object with this exact structure:
     const cleanJson = responseText.replace(/```json\n?|```/g, "").trim();
     const parsedResponse = JSON.parse(cleanJson);
 
-    // Save to DB
-    let user = await prisma.user.findFirst({ where: { email: "demo@antigravity.local" } });
-    if (!user) {
-      user = await prisma.user.create({
-        data: { email: "demo@antigravity.local", name: "Demo User" },
-      });
-    }
+    // Score extraction (already correct in original)
 
     // Extract numeric score
     let numericScore = parseFloat(String(parsedResponse.score).replace(/[^0-9.]/g, ''));

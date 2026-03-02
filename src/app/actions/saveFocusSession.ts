@@ -1,31 +1,32 @@
 "use server";
 
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
 
 export async function saveFocusSession(subject: string, durationSeconds: number) {
     try {
-        let user = await prisma.user.findFirst({ where: { email: "demo@antigravity.local" } });
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+
         if (!user) {
-            user = await prisma.user.create({
-                data: { email: "demo@antigravity.local", name: "Demo User" },
-            });
+            console.error("Unauthorized: Cannot save focus session without user");
+            return;
         }
 
         const durationMins = Math.round(durationSeconds / 60);
+        const now = new Date();
 
         if (subject === "english") {
             await prisma.englishSession.create({
-                data: { userId: user.id, durationMins, focusScore: 5 }
+                data: { userId: user.id, durationMins, focusScore: 5, startTime: now }
             });
         } else if (subject === "german") {
             await prisma.germanSession.create({
-                data: { userId: user.id, durationMins, focusScore: 5 }
+                data: { userId: user.id, durationMins, focusScore: 5, startTime: now }
             });
         } else if (subject === "math") {
             await prisma.mathSession.create({
-                data: { userId: user.id, durationMins, focusScore: 5 }
+                data: { userId: user.id, durationMins, focusScore: 5, startTime: now }
             });
         }
     } catch (e) {

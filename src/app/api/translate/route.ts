@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { geminiModel } from "@/lib/gemini";
 import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
+import { ensurePrismaUser } from "@/lib/auth-sync";
 
 export async function POST(req: Request) {
   try {
@@ -48,25 +50,30 @@ Return only JSON.
     const cleanJson = responseText.replace(/```json\n?|```/g, "").trim();
     const translationData = JSON.parse(cleanJson);
 
-    // Check if word already exists in SRS for the demo user
+    // Check if word already exists in SRS for the authenticated user
     let isAdded = false;
     try {
-      const user = await prisma.user.findFirst({ where: { email: "demo@antigravity.local" } });
-      if (user) {
-        if (isGerman) {
-          const existing = await prisma.germanWord.findFirst({
-            where: { userId: user.id, term: { equals: translationData.term, mode: 'insensitive' } }
-          });
-          isAdded = !!existing;
-        } else {
-          const existing = await prisma.englishWord.findFirst({
-            where: { userId: user.id, term: { equals: translationData.term, mode: 'insensitive' } }
-          });
-          isAdded = !!existing;
+      const supabase = createClient();
+      const { data: { user: supabaseUser } } = await supabase.auth.getUser();
+
+      if (supabaseUser) {
+        const user = await ensurePrismaUser(supabaseUser);
+        if (user) {
+          if (isGerman) {
+            const existing = await prisma.germanWord.findFirst({
+              where: { userId: user.id, term: { equals: translationData.term, mode: 'insensitive' } }
+            });
+            isAdded = !!existing;
+          } else {
+            const existing = await prisma.englishWord.findFirst({
+              where: { userId: user.id, term: { equals: translationData.term, mode: 'insensitive' } }
+            });
+            isAdded = !!existing;
+          }
         }
       }
     } catch (dbError) {
-      console.error("DB Check Error:", dbError);
+      console.error("DB Check Error or Auth Error:", dbError);
     }
 
     return NextResponse.json({ ...translationData, isAdded });

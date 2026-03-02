@@ -29,46 +29,91 @@ export default function ContributionHeatmap() {
     }, []);
 
     // Group into columns of 7 days
-    const columns = [];
+    const columns: { date: string, level: number, count: number }[][] = [];
     for (let i = 0; i < heatmapData.length; i += 7) {
         columns.push(heatmapData.slice(i, i + 7));
     }
 
-    return (
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-sm w-full min-h-[160px]">
-            <div className="flex items-center gap-3 mb-6">
-                <Activity className="w-6 h-6 text-emerald-500" />
-                <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Активность обучения</h3>
+    const getMonthLabel = (dateStr: string) => {
+        const date = new Date(dateStr);
+        return date.toLocaleString('ru-RU', { month: 'short' });
+    };
 
-                {hoveredDay && (
-                    <span className="ml-auto text-sm bg-zinc-100 dark:bg-zinc-800 px-3 py-1 rounded-full text-zinc-600 dark:text-zinc-300 font-medium animate-fade-in">
-                        {hoveredDay.date}: {hoveredDay.count && hoveredDay.count > 0 ? `${hoveredDay.count} сессий` : "Нет активности"}
-                    </span>
-                )}
+    const DAYS = ["Пн", "", "Ср", "", "Пт", "", "Вс"];
+
+    return (
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[2.5rem] p-6 lg:p-8 shadow-sm w-full min-h-[200px] transition-all hover:shadow-xl">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+                <div className="flex items-center gap-3">
+                    <Activity className="w-8 h-8 text-emerald-500" />
+                    <div>
+                        <h3 className="text-xl lg:text-2xl font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-tight leading-none">Активность</h3>
+                        <p className="text-xs lg:text-sm text-zinc-500 dark:text-zinc-400 mt-1.5 font-bold uppercase tracking-widest">История занятий по дням</p>
+                    </div>
+                </div>
+
+                <div className="h-8">
+                    {hoveredDay ? (
+                        <span className="inline-flex items-center text-xs bg-zinc-100 dark:bg-zinc-800 px-4 py-2 rounded-2xl text-zinc-700 dark:text-zinc-300 font-bold uppercase tracking-widest shadow-inner border border-zinc-200/50 dark:border-zinc-700/50 animate-in fade-in zoom-in-95">
+                            {new Date(hoveredDay.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })} &bull; {hoveredDay.count && hoveredDay.count > 0 ? `${hoveredDay.count} сессий` : "Нет активности"}
+                        </span>
+                    ) : (
+                        <span className="inline-flex items-center text-xs text-zinc-400 dark:text-zinc-500 font-bold uppercase tracking-widest px-4 py-2">
+                            Наведите на день
+                        </span>
+                    )}
+                </div>
             </div>
 
-            {/* Heatmap Grid */}
-            <div className="flex gap-1 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-zinc-200 dark:scrollbar-thumb-zinc-700">
-                {columns.map((col, colIndex) => (
-                    <div key={colIndex} className="flex flex-col gap-1">
-                        {col.map((day, dayIndex) => (
-                            <div
-                                key={dayIndex}
-                                onMouseEnter={() => setHoveredDay(day)}
-                                onMouseLeave={() => setHoveredDay(null)}
-                                className={`w-4 h-4 rounded-sm transition-colors cursor-crosshair ${LEVEL_COLORS[day.level as keyof typeof LEVEL_COLORS]}`}
-                            />
-                        ))}
-                    </div>
-                ))}
+            {/* Heatmap Area */}
+            <div className="flex bg-zinc-50 dark:bg-zinc-950/50 p-4 lg:p-6 rounded-3xl border border-zinc-100 dark:border-zinc-800/80 overflow-x-auto scrollbar-hide relative shadow-inner">
+
+                {/* Y-axis Labels */}
+                <div className="flex flex-col gap-1.5 pr-3 lg:pr-4 text-[10px] font-black uppercase text-zinc-400 dark:text-zinc-600 pt-[28px] sticky left-0 bg-zinc-50 dark:bg-[#0c0c0e] z-20">
+                    {DAYS.map((day, i) => (
+                        <span key={i} className="h-4 leading-4 w-4 text-right">{day}</span>
+                    ))}
+                </div>
+
+                {/* Heatmap Grid */}
+                <div className="flex gap-1.5 flex-1 pb-2 pt-7 shrink-0 relative">
+                    {columns.length === 0 ? (
+                        <div className="absolute inset-0 flex items-center justify-center text-sm font-bold text-zinc-400 animate-pulse">
+                            Загрузка данных...
+                        </div>
+                    ) : (
+                        columns.map((col, colIndex) => {
+                            const showMonth = colIndex === 0 || (colIndex > 0 &&
+                                getMonthLabel(col[0].date) !== getMonthLabel(columns[colIndex - 1][0].date));
+
+                            return (
+                                <div key={colIndex} className="flex flex-col gap-1.5 relative group">
+                                    {showMonth && (
+                                        <span className="absolute -top-7 left-0 text-[10px] font-black uppercase text-zinc-400 dark:text-zinc-500 whitespace-nowrap">
+                                            {getMonthLabel(col[0].date)}
+                                        </span>
+                                    )}
+                                    {col.map((day, dayIndex) => (
+                                        <div
+                                            key={dayIndex}
+                                            onMouseEnter={() => setHoveredDay(day)}
+                                            onMouseLeave={() => setHoveredDay(null)}
+                                            className={`w-4 h-4 rounded-sm transition-all duration-200 cursor-pointer border border-black/5 dark:border-white/5 hover:scale-150 hover:z-30 hover:shadow-lg ${LEVEL_COLORS[day.level as keyof typeof LEVEL_COLORS]}`}
+                                        />
+                                    ))}
+                                </div>
+                            );
+                        })
+                    )}
+                </div>
             </div>
 
             {/* Legend */}
-            <div className="flex items-center gap-2 mt-4 text-xs font-semibold text-zinc-400 uppercase tracking-widest justify-end">
+            <div className="flex items-center gap-3 mt-6 text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest justify-end">
                 <span>Меньше</span>
-                <div className="flex gap-1">
+                <div className="flex gap-1.5 p-1.5 bg-zinc-50 dark:bg-zinc-950/50 rounded-lg border border-zinc-100 dark:border-zinc-800/80">
                     {[0, 1, 2, 3, 4].map(level => (
-                        <div key={level} className={`w-3 h-3 rounded-sm ${LEVEL_COLORS[level as keyof typeof LEVEL_COLORS]}`} />
+                        <div key={level} className={`w-3 h-3 rounded-[3px] border border-black/5 dark:border-white/5 ${LEVEL_COLORS[level as keyof typeof LEVEL_COLORS]}`} />
                     ))}
                 </div>
                 <span>Больше</span>

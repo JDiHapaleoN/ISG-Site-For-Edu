@@ -1,16 +1,20 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
+
+async function getAuthenticatedUser() {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+        throw new Error("Unauthorized");
+    }
+    return user;
+}
 
 export async function getMathLogs() {
     try {
-        let user = await prisma.user.findFirst({ where: { email: "demo@antigravity.local" } });
-        if (!user) {
-            user = await prisma.user.create({
-                data: { email: "demo@antigravity.local", name: "Demo User" },
-            });
-        }
-
+        const user = await getAuthenticatedUser();
         return await prisma.mathLog.findMany({
             where: { userId: user.id },
             orderBy: { createdAt: "desc" }
@@ -26,16 +30,10 @@ export async function createMathLog(data: {
     problem: string;
     solution: string;
     errorType: string;
-    note?: string; // We'll map this to theorem or handled specially if needed
+    note?: string;
 }) {
     try {
-        let user = await prisma.user.findFirst({ where: { email: "demo@antigravity.local" } });
-        if (!user) {
-            user = await prisma.user.create({
-                data: { email: "demo@antigravity.local", name: "Demo User" },
-            });
-        }
-
+        const user = await getAuthenticatedUser();
         return await prisma.mathLog.create({
             data: {
                 userId: user.id,
@@ -43,7 +41,7 @@ export async function createMathLog(data: {
                 problem: data.problem,
                 solution: data.solution,
                 errorType: data.errorType,
-                theorem: data.note, // Mapping 'note' to 'theorem' field for now
+                theorem: data.note,
             }
         });
     } catch (error) {

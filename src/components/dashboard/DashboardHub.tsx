@@ -31,33 +31,33 @@ export default function DashboardHub() {
     const quests = data?.quests || { pomodoro: false, srs: false, essay: false };
 
     return (
-        <div className="w-full max-w-6xl mx-auto flex flex-col gap-8">
+        <div className="w-full max-w-6xl mx-auto flex flex-col gap-6 md:gap-8 px-4 md:px-0">
             {/* Welcome Banner */}
-            <div className="bg-gradient-to-r from-zinc-900 to-zinc-800 dark:from-zinc-100 dark:to-white rounded-3xl p-8 shadow-xl w-full flex flex-col md:flex-row gap-6 justify-between items-center text-white dark:text-zinc-900 overflow-hidden relative">
-                <div className="absolute -right-20 -top-20 opacity-10">
+            <div className="bg-gradient-to-r from-zinc-900 to-zinc-800 dark:from-zinc-100 dark:to-white rounded-3xl p-6 md:p-8 shadow-xl w-full flex flex-col md:flex-row gap-6 justify-between items-center text-white dark:text-zinc-900 overflow-hidden relative">
+                <div className="absolute -right-20 -top-20 opacity-10 hidden sm:block">
                     <Flame className="w-96 h-96" />
                 </div>
-                <div className="relative z-10 flex flex-col gap-2">
-                    <h2 className="text-3xl font-black tracking-tight flex items-center gap-3">
-                        С возвращением, Студент <Flame className="w-8 h-8 text-orange-500" />
+                <div className="relative z-10 flex flex-col gap-2 text-center md:text-left">
+                    <h2 className="text-2xl md:text-3xl font-black tracking-tight flex items-center justify-center md:justify-start gap-3">
+                        С возвращением <Flame className="w-8 h-8 text-orange-500" />
                     </h2>
-                    <p className="opacity-80 font-medium max-w-lg leading-relaxed">
+                    <p className="opacity-80 font-medium max-w-lg leading-relaxed text-sm md:text-base">
                         {streak > 0
                             ? `У вас ${streak} дней ударного режима! Продолжайте в том же духе. `
                             : "Начните свой ударный режим прямо сейчас! "}
                         Завершите сегодняшние сессии Pomodoro и повторите карточки SRS.
                     </p>
                 </div>
-                <div className="relative z-10 flex gap-4 shrink-0">
-                    <div className="bg-white/10 dark:bg-black/5 p-4 rounded-2xl flex flex-col items-center">
-                        <span className="text-3xl font-black">{streak}</span>
-                        <span className="text-xs uppercase font-bold opacity-70 tracking-widest text-center">Дней<br />Подряд</span>
+                <div className="relative z-10 flex gap-3 md:gap-4 shrink-0 w-full md:w-auto">
+                    <div className="bg-white/10 dark:bg-black/5 p-3 md:p-4 rounded-2xl flex flex-col items-center flex-1 md:flex-none">
+                        <span className="text-2xl md:text-3xl font-black">{streak}</span>
+                        <span className="text-[10px] md:text-xs uppercase font-bold opacity-70 tracking-widest text-center">Дней<br />Подряд</span>
                     </div>
-                    <div className="bg-white/10 dark:bg-black/5 p-4 rounded-2xl flex flex-col items-center">
-                        <span className={`text-3xl font-black ${words > 0 ? "text-emerald-400 dark:text-emerald-500" : ""}`}>
+                    <div className="bg-white/10 dark:bg-black/5 p-3 md:p-4 rounded-2xl flex flex-col items-center flex-1 md:flex-none">
+                        <span className={`text-2xl md:text-3xl font-black ${words > 0 ? "text-emerald-400 dark:text-emerald-500" : ""}`}>
                             {words}
                         </span>
-                        <span className="text-xs uppercase font-bold opacity-70 tracking-widest text-center">Слов для<br />повторения</span>
+                        <span className="text-[10px] md:text-xs uppercase font-bold opacity-70 tracking-widest text-center">Слов для<br />повторения</span>
                     </div>
                 </div>
             </div>

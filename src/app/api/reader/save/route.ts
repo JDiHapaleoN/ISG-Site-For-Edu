@@ -18,13 +18,10 @@ export async function POST(request: Request) {
     try {
         const saved = await prisma.savedText.create({
             data: {
-                userId: user.id, // We should ensure User exists in Prisma too
+                userId: user.id, // Explicitly use the user ID
                 title,
                 content,
                 module,
-                user: {
-                    connect: { email: user.email }
-                }
             }
         })
         return NextResponse.json(saved)
