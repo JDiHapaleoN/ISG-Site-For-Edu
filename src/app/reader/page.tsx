@@ -2,6 +2,7 @@ import InteractiveReader from "@/components/reader/InteractiveReader";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { ensurePrismaUser } from "@/lib/auth-sync";
+import Link from "next/link"; // Next.js fast client transition
 
 export const metadata = {
     title: "Умный текст | Antigravity LMS",
@@ -24,22 +25,30 @@ export default async function ReaderPage({
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
-    let persistedText = "";
-    let persistedModule = searchParams.lang === "english" ? "english" : "german";
+    // 1. URL Param is the source of truth for the active module view
+    let activeModule = searchParams.lang === "english" ? "english" : "german";
+    let dbCustomText = "";
 
+    // 2. Load custom text ONLY if the user is viewing the language they last saved text for.
     if (user) {
         await ensurePrismaUser(user);
         const dbUser = await prisma.user.findUnique({
             where: { email: user.email! }
         });
-        if (dbUser?.activeReaderText) {
-            persistedText = dbUser.activeReaderText;
-            persistedModule = (dbUser.activeReaderModule as "english" | "german") || persistedModule;
+
+        // If URL lang isn't specified, default to their last saved module
+        if (!searchParams.lang && dbUser?.activeReaderModule) {
+            activeModule = dbUser.activeReaderModule;
+        }
+
+        // Only load their custom text if the current tab matches the language of their saved text
+        if (dbUser?.activeReaderText && dbUser?.activeReaderModule === activeModule) {
+            dbCustomText = dbUser.activeReaderText;
         }
     }
 
-    const module = persistedModule as "english" | "german";
-    const text = persistedText || (module === "german" ? SAMPLE_TEXT_GERMAN : SAMPLE_TEXT_ENGLISH);
+    const module = activeModule as "english" | "german";
+    const text = dbCustomText || (module === "german" ? SAMPLE_TEXT_GERMAN : SAMPLE_TEXT_ENGLISH);
 
     return (
         <main className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-6">
@@ -54,7 +63,7 @@ export default async function ReaderPage({
                 </div>
 
                 <div className="flex gap-2 p-1 bg-zinc-200 dark:bg-zinc-800 rounded-lg">
-                    <a
+                    <Link
                         href="?lang=german"
                         className={`px-4 py-2 rounded-md font-semibold transition ${module === "german"
                             ? "bg-white dark:bg-zinc-700 shadow-sm"
@@ -62,8 +71,8 @@ export default async function ReaderPage({
                             }`}
                     >
                         Немецкий
-                    </a>
-                    <a
+                    </Link>
+                    <Link
                         href="?lang=english"
                         className={`px-4 py-2 rounded-md font-semibold transition ${module === "english"
                             ? "bg-white dark:bg-zinc-700 shadow-sm"
@@ -71,11 +80,12 @@ export default async function ReaderPage({
                             }`}
                     >
                         Английский
-                    </a>
+                    </Link>
                 </div>
             </div>
 
-            <InteractiveReader initialText={text} module={module} />
+            {/* Use key to force unmount/remount when module changes to clear React state easily */}
+            <InteractiveReader key={module} initialText={text} module={module} />
         </main>
     );
 }

@@ -193,7 +193,7 @@ export default function InteractiveReader({ initialText, module }: ReaderProps) 
 
                 {isEditing ? (
                     <textarea
-                        className="w-full flex-1 min-h-[300px] md:min-h-[400px] p-4 bg-white/80 dark:bg-zinc-950/80 border border-zinc-200 dark:border-zinc-800 rounded-2xl resize-none font-serif text-base md:text-lg leading-loose focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full flex-1 min-h-[300px] md:min-h-[400px] p-4 lg:p-6 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-2xl resize-none font-sans text-base md:text-lg lg:text-xl leading-relaxed text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-inner"
                         value={customText}
                         onChange={(e) => setCustomText(e.target.value)}
                         placeholder="Вставьте сюда свой текст для изучения..."
