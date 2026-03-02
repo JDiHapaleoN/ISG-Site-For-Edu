@@ -19,6 +19,21 @@ export default function RegisterPage() {
 
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Client-side Validation
+        if (name.trim().length < 2) {
+            setError("Пожалуйста, введите ваше имя");
+            return;
+        }
+        if (!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+            setError("Пожалуйста, введите корректный email адрес");
+            return;
+        }
+        if (password.length < 6) {
+            setError("Пароль должен содержать минимум 6 символов");
+            return;
+        }
+
         setIsLoading(true);
         setError(null);
 
