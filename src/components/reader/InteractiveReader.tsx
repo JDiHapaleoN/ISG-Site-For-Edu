@@ -199,7 +199,7 @@ export default function InteractiveReader({ initialText, module }: ReaderProps) 
                         placeholder="Вставьте сюда свой текст для изучения..."
                     />
                 ) : (
-                    <div className="text-lg md:text-xl leading-[1.8] text-zinc-800 dark:text-zinc-200 font-serif tracking-wide select-text pb-20 lg:pb-0">
+                    <div className="text-lg md:text-xl lg:text-2xl leading-relaxed text-zinc-800 dark:text-zinc-200 font-sans tracking-wide select-text pb-20 lg:pb-0">
                         {words.map((chunk, i) => {
                             const isWord = /[\p{L}\p{N}]/u.test(chunk);
                             const isHighlighted = highlights.has(i);
