@@ -36,7 +36,6 @@ export function parseSmartText(input: string): { text: string; deadline: string 
     let text = input.trim();
     let deadline: Date | null = null;
 
-    // Match time patterns like "в 10", "в 10:30", "at 10", "at 10:30"
     const timeRegex = /(?:в|at)\s+(\d{1,2})(?::(\d{2}))?\b/i;
     const timeMatch = text.match(timeRegex);
 
@@ -51,7 +50,6 @@ export function parseSmartText(input: string): { text: string; deadline: string 
         text = text.replace(timeMatch[0], "").trim();
     }
 
-    // Check for "tomorrow" / "завтра"
     for (const word of TOMORROW_WORDS) {
         if (text.toLowerCase().includes(word)) {
             deadline = new Date();
@@ -61,7 +59,6 @@ export function parseSmartText(input: string): { text: string; deadline: string 
         }
     }
 
-    // Check for "today" / "сегодня"
     if (!deadline) {
         for (const word of TODAY_WORDS) {
             if (text.toLowerCase().includes(word)) {
@@ -72,7 +69,6 @@ export function parseSmartText(input: string): { text: string; deadline: string 
         }
     }
 
-    // If time was found but no date keyword, assume today
     if (hasTime && !deadline) {
         deadline = new Date();
     }
@@ -83,7 +79,6 @@ export function parseSmartText(input: string): { text: string; deadline: string 
         deadline.setHours(23, 59, 0, 0);
     }
 
-    // Clean up extra spaces
     text = text.replace(/\s{2,}/g, " ").trim();
 
     return {
@@ -94,87 +89,178 @@ export function parseSmartText(input: string): { text: string; deadline: string 
 
 // ── Hook ───────────────────────────────────────────────────────────
 
-const TASKS_KEY = "organizer-tasks";
-const HABITS_KEY = "organizer-habits";
 const POMODORO_KEY = "organizer-pomodoro";
 
-function loadFromStorage<T>(key: string, fallback: T): T {
-    if (typeof window === "undefined") return fallback;
+function loadPomodoro(): PomodoroStats {
+    if (typeof window === "undefined") return { completedToday: 0, lastDate: new Date().toISOString().slice(0, 10) };
     try {
-        const raw = localStorage.getItem(key);
-        return raw ? JSON.parse(raw) : fallback;
+        const raw = localStorage.getItem(POMODORO_KEY);
+        return raw ? JSON.parse(raw) : { completedToday: 0, lastDate: new Date().toISOString().slice(0, 10) };
     } catch {
-        return fallback;
+        return { completedToday: 0, lastDate: new Date().toISOString().slice(0, 10) };
     }
 }
 
 export function useOrganizer() {
-    const [tasks, setTasks] = useState<Task[]>(() => loadFromStorage(TASKS_KEY, []));
-    const [habits, setHabits] = useState<Habit[]>(() => loadFromStorage(HABITS_KEY, []));
-    const [pomodoroStats, setPomodoroStats] = useState<PomodoroStats>(() =>
-        loadFromStorage(POMODORO_KEY, { completedToday: 0, lastDate: new Date().toISOString().slice(0, 10) })
-    );
+    const [tasks, setTasks] = useState<Task[]>([]);
+    const [habits, setHabits] = useState<Habit[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [pomodoroStats, setPomodoroStats] = useState<PomodoroStats>(loadPomodoro);
 
-    // Persist tasks
+    // ── Load from API on mount ──
     useEffect(() => {
-        localStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
-    }, [tasks]);
+        const loadData = async () => {
+            try {
+                const [tasksRes, habitsRes] = await Promise.all([
+                    fetch("/api/organizer/tasks"),
+                    fetch("/api/organizer/habits"),
+                ]);
+                if (tasksRes.ok) {
+                    const data = await tasksRes.json();
+                    setTasks(data.map((t: any) => ({ ...t, deadline: t.deadline || null })));
+                }
+                if (habitsRes.ok) {
+                    const data = await habitsRes.json();
+                    setHabits(data);
+                }
+            } catch (e) {
+                console.error("Failed to load organizer data", e);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        loadData();
+    }, []);
 
-    // Persist habits
-    useEffect(() => {
-        localStorage.setItem(HABITS_KEY, JSON.stringify(habits));
-    }, [habits]);
-
-    // Persist pomodoro
+    // Persist pomodoro in localStorage (session data)
     useEffect(() => {
         localStorage.setItem(POMODORO_KEY, JSON.stringify(pomodoroStats));
     }, [pomodoroStats]);
 
-    // ── Task Operations ──
+    // ── Task Operations (Optimistic UI + API) ──
 
-    const addTask = useCallback((text: string, priority: Priority = "medium", deadline: string | null = null) => {
+    const addTask = useCallback(async (text: string, priority: Priority = "medium", deadline: string | null = null) => {
         const parsed = parseSmartText(text);
-        const newTask: Task = {
-            id: crypto.randomUUID(),
+        const tempId = crypto.randomUUID();
+        const finalDeadline = deadline || parsed.deadline;
+
+        // Optimistic
+        const optimistic: Task = {
+            id: tempId,
             text: parsed.text,
             completed: false,
             priority,
-            deadline: deadline || parsed.deadline,
+            deadline: finalDeadline,
             createdAt: new Date().toISOString(),
         };
-        setTasks(prev => [newTask, ...prev]);
+        setTasks(prev => [optimistic, ...prev]);
+
+        try {
+            const res = await fetch("/api/organizer/tasks", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ text: parsed.text, priority, deadline: finalDeadline }),
+            });
+            if (res.ok) {
+                const saved = await res.json();
+                setTasks(prev => prev.map(t => t.id === tempId ? { ...saved, deadline: saved.deadline || null } : t));
+            }
+        } catch (e) {
+            console.error("Failed to save task", e);
+        }
     }, []);
 
-    const toggleTask = useCallback((id: string) => {
-        setTasks(prev => prev.map(t => (t.id === id ? { ...t, completed: !t.completed } : t)));
-    }, []);
+    const toggleTask = useCallback(async (id: string) => {
+        setTasks(prev => prev.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
+        const task = tasks.find(t => t.id === id);
+        if (!task) return;
 
-    const deleteTask = useCallback((id: string) => {
+        try {
+            await fetch("/api/organizer/tasks", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id, completed: !task.completed }),
+            });
+        } catch (e) {
+            console.error("Failed to toggle task", e);
+            setTasks(prev => prev.map(t => t.id === id ? { ...t, completed: task.completed } : t));
+        }
+    }, [tasks]);
+
+    const deleteTask = useCallback(async (id: string) => {
+        const backup = tasks;
         setTasks(prev => prev.filter(t => t.id !== id));
+
+        try {
+            await fetch("/api/organizer/tasks", {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id }),
+            });
+        } catch (e) {
+            console.error("Failed to delete task", e);
+            setTasks(backup);
+        }
+    }, [tasks]);
+
+    const updateTaskPriority = useCallback(async (id: string, priority: Priority) => {
+        setTasks(prev => prev.map(t => t.id === id ? { ...t, priority } : t));
+
+        try {
+            await fetch("/api/organizer/tasks", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id, priority }),
+            });
+        } catch (e) {
+            console.error("Failed to update priority", e);
+        }
     }, []);
 
-    const updateTaskPriority = useCallback((id: string, priority: Priority) => {
-        setTasks(prev => prev.map(t => (t.id === id ? { ...t, priority } : t)));
+    const updateTaskDeadline = useCallback(async (id: string, deadline: string | null) => {
+        setTasks(prev => prev.map(t => t.id === id ? { ...t, deadline } : t));
+
+        try {
+            await fetch("/api/organizer/tasks", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id, deadline }),
+            });
+        } catch (e) {
+            console.error("Failed to update deadline", e);
+        }
     }, []);
 
-    const updateTaskDeadline = useCallback((id: string, deadline: string | null) => {
-        setTasks(prev => prev.map(t => (t.id === id ? { ...t, deadline } : t)));
-    }, []);
+    // ── Habit Operations (Optimistic UI + API) ──
 
-    // ── Habit Operations ──
-
-    const addHabit = useCallback((name: string) => {
-        const newHabit: Habit = {
-            id: crypto.randomUUID(),
+    const addHabit = useCallback(async (name: string) => {
+        const tempId = crypto.randomUUID();
+        const optimistic: Habit = {
+            id: tempId,
             name,
             completedDates: [],
             createdAt: new Date().toISOString(),
         };
-        setHabits(prev => [...prev, newHabit]);
+        setHabits(prev => [...prev, optimistic]);
+
+        try {
+            const res = await fetch("/api/organizer/habits", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name }),
+            });
+            if (res.ok) {
+                const saved = await res.json();
+                setHabits(prev => prev.map(h => h.id === tempId ? saved : h));
+            }
+        } catch (e) {
+            console.error("Failed to save habit", e);
+        }
     }, []);
 
-    const toggleHabitToday = useCallback((id: string) => {
+    const toggleHabitToday = useCallback(async (id: string) => {
         const today = new Date().toISOString().slice(0, 10);
+
         setHabits(prev =>
             prev.map(h => {
                 if (h.id !== id) return h;
@@ -184,11 +270,33 @@ export function useOrganizer() {
                 return { ...h, completedDates: dates };
             })
         );
+
+        try {
+            await fetch("/api/organizer/habits", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id, date: today }),
+            });
+        } catch (e) {
+            console.error("Failed to toggle habit", e);
+        }
     }, []);
 
-    const deleteHabit = useCallback((id: string) => {
+    const deleteHabit = useCallback(async (id: string) => {
+        const backup = habits;
         setHabits(prev => prev.filter(h => h.id !== id));
-    }, []);
+
+        try {
+            await fetch("/api/organizer/habits", {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id }),
+            });
+        } catch (e) {
+            console.error("Failed to delete habit", e);
+            setHabits(backup);
+        }
+    }, [habits]);
 
     const getStreak = useCallback((habit: Habit): number => {
         const sorted = [...habit.completedDates].sort().reverse();
@@ -205,14 +313,13 @@ export function useOrganizer() {
             if (sorted.includes(dateStr)) {
                 streak++;
             } else if (i > 0) {
-                break; // gap found
+                break;
             }
-            // allow skipping today if not yet completed
         }
         return streak;
     }, []);
 
-    // ── Pomodoro Operations ──
+    // ── Pomodoro Operations (localStorage only) ──
 
     const addPomodoroSession = useCallback(() => {
         const today = new Date().toISOString().slice(0, 10);
@@ -227,6 +334,7 @@ export function useOrganizer() {
     return {
         tasks,
         habits,
+        isLoading,
         pomodoroStats,
         addTask,
         toggleTask,

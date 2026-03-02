@@ -35,6 +35,8 @@ model User {
   mathSessions    MathSession[]
   practiceLogs    PracticeLog[]
   savedTexts      SavedText[]
+  organizerTasks  OrganizerTask[]
+  organizerHabits OrganizerHabit[]
 }
 
 model SavedText {
@@ -227,4 +229,30 @@ model AlgorithmStep {
   math        String?
   order       Int
   algorithm   Algorithm @relation(fields: [algorithmId], references: [id], onDelete: Cascade)
+}
+
+// ============================================
+// ORGANIZER MODULE
+// ============================================
+
+model OrganizerTask {
+  id        String    @id @default(uuid())
+  userId    String
+  text      String
+  completed Boolean   @default(false)
+  priority  String    @default("medium") // 'high' | 'medium' | 'low'
+  deadline  DateTime?
+  createdAt DateTime  @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model OrganizerHabit {
+  id             String   @id @default(uuid())
+  userId         String
+  name           String
+  completedDates String   @default("[]") // JSON array of YYYY-MM-DD strings
+  createdAt      DateTime @default(now())
+
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
