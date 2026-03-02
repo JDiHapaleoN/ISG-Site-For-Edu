@@ -34,7 +34,7 @@ export default function ShadowingPage({
     const transcript = module === "german" ? GERMAN_TRANSCRIPT : ENGLISH_TRANSCRIPT;
 
     return (
-        <main className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-6">
+        <main className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-4 md:p-6">
             <div className="max-w-6xl mx-auto mb-8 flex items-center justify-between">
                 <div>
                     <h1 className="text-4xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50 flex items-center gap-3">

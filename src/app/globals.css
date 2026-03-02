@@ -23,13 +23,11 @@ body {
   background: linear-gradient(to bottom,
       transparent,
       rgb(var(--background-end-rgb))) rgb(var(--background-start-rgb));
-  /* PWA: respect iPhone notch / dynamic island */
-  padding-top: env(safe-area-inset-top);
-  padding-bottom: env(safe-area-inset-bottom);
-  padding-left: env(safe-area-inset-left);
-  padding-right: env(safe-area-inset-right);
   /* Prevent iOS zoom on input focus */
   -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  /* Smooth scrolling for mobile */
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Hide scrollbar but keep scroll functionality */

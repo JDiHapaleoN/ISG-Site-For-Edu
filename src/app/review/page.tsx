@@ -14,7 +14,7 @@ export default function SrsPage({
     const module = searchParams.lang === "german" ? "german" : "english";
 
     return (
-        <main className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-6">
+        <main className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-4 md:p-6">
             <div className="max-w-6xl mx-auto mb-12 flex items-center justify-between">
                 <div>
                     <h1 className="text-4xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50 flex items-center gap-3">
@@ -31,8 +31,8 @@ export default function SrsPage({
                     <a
                         href="?lang=german"
                         className={`px-4 py-2 rounded-md font-semibold transition ${module === "german"
-                                ? "bg-white dark:bg-zinc-700 shadow-sm"
-                                : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+                            ? "bg-white dark:bg-zinc-700 shadow-sm"
+                            : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
                             }`}
                     >
                         German 🇩🇪
@@ -40,8 +40,8 @@ export default function SrsPage({
                     <a
                         href="?lang=english"
                         className={`px-4 py-2 rounded-md font-semibold transition ${module === "english"
-                                ? "bg-white dark:bg-zinc-700 shadow-sm"
-                                : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+                            ? "bg-white dark:bg-zinc-700 shadow-sm"
+                            : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
                             }`}
                     >
                         English 🇬🇧

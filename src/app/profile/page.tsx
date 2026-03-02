@@ -39,7 +39,7 @@ export default async function ProfilePage() {
     const bannerColor = dbUser.bannerColor || "#6366f1";
 
     return (
-        <main className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-6 md:p-12 pb-24">
+        <main className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-4 md:p-6 lg:p-12 pb-24">
             <div className="max-w-6xl mx-auto space-y-12">
 
                 {/* Profile Header */}

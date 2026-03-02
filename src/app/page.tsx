@@ -7,7 +7,7 @@ export const metadata = {
 
 export default function Home() {
     return (
-        <main className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-6 flex flex-col pt-12">
+        <main className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-4 md:p-6 flex flex-col">
             <DashboardHub />
         </main>
     );

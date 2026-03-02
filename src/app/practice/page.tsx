@@ -9,7 +9,7 @@ export const metadata = {
 
 export default function PracticePage() {
     return (
-        <main className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-6 flex flex-col pt-12 gap-16">
+        <main className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-4 md:p-6 flex flex-col gap-16">
             <div className="max-w-6xl mx-auto w-full flex flex-col gap-4">
                 <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50 flex items-center gap-4">
                     <PenTool className="w-12 h-12 text-sky-500" />

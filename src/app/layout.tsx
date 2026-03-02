@@ -14,13 +14,23 @@ export const metadata: Metadata = {
     title: BRAND_NAME,
     description: BRAND_DESCRIPTION,
     manifest: "/manifest.json",
-    themeColor: "#6366f1",
-    viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0",
     appleWebApp: {
         capable: true,
-        statusBarStyle: "default",
+        statusBarStyle: "black-translucent",
         title: BRAND_NAME,
     },
+    other: {
+        "mobile-web-app-capable": "yes",
+    },
+};
+
+export const viewport = {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+    viewportFit: "cover" as const,
+    themeColor: "#6366f1",
 };
 
 export default function RootLayout({
