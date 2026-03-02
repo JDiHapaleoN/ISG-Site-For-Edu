@@ -14,6 +14,12 @@ const LONG_BREAK = 15 * 60; // 15 min
 
 type Phase = "work" | "short_break" | "long_break";
 
+const PHASE_CONFIG: Record<Phase, { label: string; duration: number; color: string }> = {
+    work: { label: "Фокус", duration: WORK_TIME, color: "text-indigo-500" },
+    short_break: { label: "Короткий перерыв", duration: SHORT_BREAK, color: "text-emerald-500" },
+    long_break: { label: "Длинный перерыв", duration: LONG_BREAK, color: "text-amber-500" },
+};
+
 export default function PomodoroTimer({ completedToday, addPomodoroSession }: PomodoroTimerProps) {
     const [phase, setPhase] = useState<Phase>("work");
     const [timeLeft, setTimeLeft] = useState(WORK_TIME);
@@ -25,13 +31,7 @@ export default function PomodoroTimer({ completedToday, addPomodoroSession }: Po
     const noiseNodeRef = useRef<AudioBufferSourceNode | null>(null);
     const gainRef = useRef<GainNode | null>(null);
 
-    const phaseConfig: Record<Phase, { label: string; icon: React.ReactNode; duration: number; color: string }> = {
-        work: { label: "Фокус", icon: <Brain className="w-6 h-6" />, duration: WORK_TIME, color: "text-indigo-500" },
-        short_break: { label: "Короткий перерыв", icon: <Coffee className="w-6 h-6" />, duration: SHORT_BREAK, color: "text-emerald-500" },
-        long_break: { label: "Длинный перерыв", icon: <Coffee className="w-6 h-6" />, duration: LONG_BREAK, color: "text-amber-500" },
-    };
-
-    const totalSeconds = phaseConfig[phase].duration;
+    const totalSeconds = PHASE_CONFIG[phase].duration;
     const progress = ((totalSeconds - timeLeft) / totalSeconds) * 100;
 
     // Timer logic
@@ -45,7 +45,7 @@ export default function PomodoroTimer({ completedToday, addPomodoroSession }: Po
                             addPomodoroSession();
                             const nextPhase = (completedToday + 1) % 4 === 0 ? "long_break" : "short_break";
                             setPhase(nextPhase);
-                            return phaseConfig[nextPhase].duration;
+                            return PHASE_CONFIG[nextPhase].duration;
                         } else {
                             setPhase("work");
                             return WORK_TIME;
@@ -115,7 +115,7 @@ export default function PomodoroTimer({ completedToday, addPomodoroSession }: Po
 
     const reset = () => {
         setIsRunning(false);
-        setTimeLeft(phaseConfig[phase].duration);
+        setTimeLeft(PHASE_CONFIG[phase].duration);
     };
 
     const formatTime = (s: number) => {
@@ -132,20 +132,20 @@ export default function PomodoroTimer({ completedToday, addPomodoroSession }: Po
         <div className="flex flex-col items-center gap-8 py-8">
             {/* Phase Selector */}
             <div className="flex gap-2 p-1 bg-zinc-100 dark:bg-zinc-900 rounded-xl">
-                {(Object.keys(phaseConfig) as Phase[]).map(p => (
+                {(Object.keys(PHASE_CONFIG) as Phase[]).map(p => (
                     <button
                         key={p}
                         onClick={() => {
                             setPhase(p);
-                            setTimeLeft(phaseConfig[p].duration);
+                            setTimeLeft(PHASE_CONFIG[p].duration);
                             setIsRunning(false);
                         }}
-                        className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${phase === p
+                        className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all ${phase === p
                             ? "bg-white dark:bg-zinc-800 shadow-sm text-zinc-900 dark:text-zinc-100"
                             : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
                             }`}
                     >
-                        {phaseConfig[p].label}
+                        {PHASE_CONFIG[p].label}
                     </button>
                 ))}
             </div>
@@ -158,7 +158,7 @@ export default function PomodoroTimer({ completedToday, addPomodoroSession }: Po
                     <circle cx="144" cy="144" r={radius} fill="none" strokeWidth="8"
                         strokeLinecap="round"
                         stroke="currentColor"
-                        className={phaseConfig[phase].color}
+                        className={PHASE_CONFIG[phase].color}
                         style={{
                             strokeDasharray: circumference,
                             strokeDashoffset,
@@ -167,12 +167,14 @@ export default function PomodoroTimer({ completedToday, addPomodoroSession }: Po
                     />
                 </svg>
                 <div className="flex flex-col items-center gap-2 z-10">
-                    <span className={`${phaseConfig[phase].color}`}>{phaseConfig[phase].icon}</span>
+                    <span className={`${PHASE_CONFIG[phase].color}`}>
+                        {phase === "work" ? <Brain className="w-6 h-6" /> : <Coffee className="w-6 h-6" />}
+                    </span>
                     <span className="text-5xl font-black tabular-nums text-zinc-900 dark:text-zinc-100 font-mono">
                         {formatTime(timeLeft)}
                     </span>
                     <span className="text-xs font-bold uppercase tracking-widest text-zinc-400">
-                        {phaseConfig[phase].label}
+                        {PHASE_CONFIG[phase].label}
                     </span>
                 </div>
             </div>

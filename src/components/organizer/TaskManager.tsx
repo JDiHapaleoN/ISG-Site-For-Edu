@@ -178,7 +178,7 @@ export default function TaskManager({
                                 {/* Delete */}
                                 <button
                                     onClick={() => deleteTask(task.id)}
-                                    className="flex-shrink-0 p-1.5 text-zinc-400 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all"
+                                    className="flex-shrink-0 p-1.5 text-zinc-400 hover:text-rose-500 opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-all"
                                 >
                                     <Trash2 className="w-4 h-4" />
                                 </button>

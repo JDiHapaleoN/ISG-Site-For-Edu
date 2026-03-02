@@ -101,7 +101,7 @@ export default function HabitTracker({ habits, addHabit, toggleHabitToday, delet
                                     </div>
                                     <button
                                         onClick={() => deleteHabit(habit.id)}
-                                        className="p-2 text-zinc-400 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all"
+                                        className="p-2 text-zinc-400 hover:text-rose-500 opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-all"
                                     >
                                         <Trash2 className="w-4 h-4" />
                                     </button>

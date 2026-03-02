@@ -54,44 +54,60 @@ export default function OrganizerPage() {
                 </div>
 
                 {/* Content */}
-                <div className="bg-white/50 dark:bg-zinc-900/50 backdrop-blur-xl border border-zinc-200 dark:border-zinc-800 rounded-3xl p-4 md:p-6 shadow-2xl">
-                    {activeTab === "tasks" && (
-                        <TaskManager
-                            tasks={organizer.tasks}
-                            addTask={organizer.addTask}
-                            toggleTask={organizer.toggleTask}
-                            deleteTask={organizer.deleteTask}
-                            updateTaskPriority={organizer.updateTaskPriority}
-                            updateTaskDeadline={organizer.updateTaskDeadline}
-                        />
-                    )}
-                    {activeTab === "calendar" && (
-                        <CalendarView
-                            tasks={organizer.tasks}
-                            addTask={organizer.addTask}
-                            toggleTask={organizer.toggleTask}
-                        />
-                    )}
-                    {activeTab === "pomodoro" && (
-                        <PomodoroTimer
-                            completedToday={organizer.pomodoroStats.completedToday}
-                            addPomodoroSession={organizer.addPomodoroSession}
-                        />
-                    )}
-                    {activeTab === "habits" && (
-                        <HabitTracker
-                            habits={organizer.habits}
-                            addHabit={organizer.addHabit}
-                            toggleHabitToday={organizer.toggleHabitToday}
-                            deleteHabit={organizer.deleteHabit}
-                            getStreak={organizer.getStreak}
-                        />
-                    )}
-                    {activeTab === "matrix" && (
-                        <EisenhowerMatrix
-                            tasks={organizer.tasks}
-                            toggleTask={organizer.toggleTask}
-                        />
+                <div className="bg-white/50 dark:bg-zinc-900/50 backdrop-blur-xl border border-zinc-200 dark:border-zinc-800 rounded-3xl p-4 md:p-6 shadow-2xl min-h-[400px]">
+                    {organizer.isLoading ? (
+                        <div className="space-y-4 animate-pulse">
+                            <div className="h-14 bg-zinc-200 dark:bg-zinc-800 rounded-2xl" />
+                            <div className="flex gap-2">
+                                <div className="h-8 w-20 bg-zinc-200 dark:bg-zinc-800 rounded-lg" />
+                                <div className="h-8 w-24 bg-zinc-200 dark:bg-zinc-800 rounded-lg" />
+                                <div className="h-8 w-20 bg-zinc-200 dark:bg-zinc-800 rounded-lg" />
+                            </div>
+                            {[1, 2, 3].map(i => (
+                                <div key={i} className="h-16 bg-zinc-200 dark:bg-zinc-800 rounded-2xl" />
+                            ))}
+                        </div>
+                    ) : (
+                        <>
+                            {activeTab === "tasks" && (
+                                <TaskManager
+                                    tasks={organizer.tasks}
+                                    addTask={organizer.addTask}
+                                    toggleTask={organizer.toggleTask}
+                                    deleteTask={organizer.deleteTask}
+                                    updateTaskPriority={organizer.updateTaskPriority}
+                                    updateTaskDeadline={organizer.updateTaskDeadline}
+                                />
+                            )}
+                            {activeTab === "calendar" && (
+                                <CalendarView
+                                    tasks={organizer.tasks}
+                                    addTask={organizer.addTask}
+                                    toggleTask={organizer.toggleTask}
+                                />
+                            )}
+                            {activeTab === "pomodoro" && (
+                                <PomodoroTimer
+                                    completedToday={organizer.pomodoroStats.completedToday}
+                                    addPomodoroSession={organizer.addPomodoroSession}
+                                />
+                            )}
+                            {activeTab === "habits" && (
+                                <HabitTracker
+                                    habits={organizer.habits}
+                                    addHabit={organizer.addHabit}
+                                    toggleHabitToday={organizer.toggleHabitToday}
+                                    deleteHabit={organizer.deleteHabit}
+                                    getStreak={organizer.getStreak}
+                                />
+                            )}
+                            {activeTab === "matrix" && (
+                                <EisenhowerMatrix
+                                    tasks={organizer.tasks}
+                                    toggleTask={organizer.toggleTask}
+                                />
+                            )}
+                        </>
                     )}
                 </div>
             </div>

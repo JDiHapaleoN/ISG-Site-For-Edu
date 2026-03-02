@@ -2,7 +2,7 @@
     "name": "ISG - Educational Platform",
     "short_name": "ISG Edu",
     "description": "Premium educational platform for IELTS, TestDaF and Math preparation.",
-    "start_url": "/dashboard",
+    "start_url": "/",
     "display": "standalone",
     "background_color": "#000000",
     "theme_color": "#6366f1",
