@@ -84,6 +84,7 @@ export default function OrganizerPage() {
                                     tasks={organizer.tasks}
                                     addTask={organizer.addTask}
                                     toggleTask={organizer.toggleTask}
+                                    deleteTask={organizer.deleteTask}
                                 />
                             )}
                             {activeTab === "pomodoro" && (
@@ -105,6 +106,9 @@ export default function OrganizerPage() {
                                 <EisenhowerMatrix
                                     tasks={organizer.tasks}
                                     toggleTask={organizer.toggleTask}
+                                    deleteTask={organizer.deleteTask}
+                                    updateTaskPriority={organizer.updateTaskPriority}
+                                    updateTaskDeadline={organizer.updateTaskDeadline}
                                 />
                             )}
                         </>
