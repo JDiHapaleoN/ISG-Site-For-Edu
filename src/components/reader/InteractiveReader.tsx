@@ -284,7 +284,16 @@ export default function InteractiveReader({ initialText, module }: ReaderProps) 
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-1">
-                                        <button className="p-2.5 bg-zinc-100 dark:bg-zinc-800 rounded-xl text-zinc-600 dark:text-zinc-400 hover:text-indigo-500 transition-colors">
+                                        <button
+                                            onClick={() => {
+                                                if (!selectedWord || typeof window === 'undefined') return;
+                                                const utterance = new SpeechSynthesisUtterance(selectedWord.term);
+                                                utterance.lang = module === 'german' ? 'de-DE' : 'en-US';
+                                                window.speechSynthesis.cancel();
+                                                window.speechSynthesis.speak(utterance);
+                                            }}
+                                            className="p-2.5 bg-zinc-100 dark:bg-zinc-800 rounded-xl text-zinc-600 dark:text-zinc-400 hover:text-indigo-500 transition-colors"
+                                        >
                                             <Volume2 className="w-5 h-5" />
                                         </button>
                                         <button

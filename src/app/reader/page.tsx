@@ -23,7 +23,8 @@ export default async function ReaderPage({
     searchParams: { lang?: string };
 }) {
     const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user || null;
 
     // 1. URL Param is the source of truth for the active module view
     let activeModule = searchParams.lang === "english" ? "english" : "german";
@@ -65,6 +66,7 @@ export default async function ReaderPage({
                 <div className="flex gap-2 p-1 bg-zinc-200 dark:bg-zinc-800 rounded-lg shrink-0 self-start md:self-auto w-full sm:w-auto">
                     <Link
                         href="?lang=german"
+                        prefetch={true}
                         className={`flex-1 text-center sm:flex-none px-3 sm:px-4 py-2 rounded-md text-sm font-semibold transition ${module === "german"
                             ? "bg-white dark:bg-zinc-700 shadow-sm"
                             : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
@@ -74,6 +76,7 @@ export default async function ReaderPage({
                     </Link>
                     <Link
                         href="?lang=english"
+                        prefetch={true}
                         className={`flex-1 text-center sm:flex-none px-3 sm:px-4 py-2 rounded-md text-sm font-semibold transition ${module === "english"
                             ? "bg-white dark:bg-zinc-700 shadow-sm"
                             : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"

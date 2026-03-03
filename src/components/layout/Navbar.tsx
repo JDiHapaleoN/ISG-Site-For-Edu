@@ -89,6 +89,7 @@ export default function Navbar() {
                                 <Link
                                     key={item.href}
                                     href={item.href}
+                                    prefetch={true}
                                     className={`flex items-center gap-1.5 px-2.5 lg:px-3 py-2 rounded-xl text-xs lg:text-sm font-semibold transition-all whitespace-nowrap flex-shrink-0 ${isActive
                                         ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
                                         : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
@@ -176,6 +177,7 @@ export default function Navbar() {
                                         <Link
                                             key={item.href}
                                             href={item.href}
+                                            prefetch={true}
                                             className={`flex items-center gap-3 p-3.5 rounded-2xl text-base font-bold transition-all ${isActive
                                                 ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20"
                                                 : "bg-zinc-50 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 active:bg-zinc-100 dark:active:bg-zinc-800"

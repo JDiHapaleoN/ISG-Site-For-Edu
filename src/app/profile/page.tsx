@@ -10,7 +10,8 @@ import { getDashboardData } from "@/app/actions/getDashboardData";
 
 export default async function ProfilePage() {
     const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user || null;
 
     if (!user) {
         redirect("/login");
