@@ -36,7 +36,7 @@ export default function ContributionHeatmap() {
 
     const getMonthLabel = (dateStr: string) => {
         const date = new Date(dateStr);
-        return date.toLocaleString('ru-RU', { month: 'short' });
+        return date.toLocaleString('ru-RU', { month: 'short' }).replace('.', '');
     };
 
     const DAYS = ["Пн", "", "Ср", "", "Пт", "", "Вс"];
@@ -82,28 +82,41 @@ export default function ContributionHeatmap() {
                             Загрузка данных...
                         </div>
                     ) : (
-                        columns.map((col, colIndex) => {
-                            const showMonth = colIndex === 0 || (colIndex > 0 &&
-                                getMonthLabel(col[0].date) !== getMonthLabel(columns[colIndex - 1][0].date));
+                        (() => {
+                            let lastMonthCol = -10; // Keep track of last column index where we placed a label
 
-                            return (
-                                <div key={colIndex} className="flex flex-col gap-1.5 relative group">
-                                    {showMonth && (
-                                        <span className="absolute -top-7 left-0 text-[9px] sm:text-[10px] font-black uppercase text-zinc-400 dark:text-zinc-500 whitespace-nowrap overflow-hidden text-ellipsis max-w-[40px] sm:max-w-none">
-                                            {getMonthLabel(col[0].date)}
-                                        </span>
-                                    )}
-                                    {col.map((day, dayIndex) => (
-                                        <div
-                                            key={dayIndex}
-                                            onMouseEnter={() => setHoveredDay(day)}
-                                            onMouseLeave={() => setHoveredDay(null)}
-                                            className={`w-4 h-4 sm:w-5 sm:h-5 rounded-sm transition-all duration-200 cursor-pointer border border-black/5 dark:border-white/5 hover:scale-150 hover:z-30 hover:shadow-lg rounded-[3px] ${LEVEL_COLORS[day.level as keyof typeof LEVEL_COLORS]}`}
-                                        />
-                                    ))}
-                                </div>
-                            );
-                        })
+                            return columns.map((col, colIndex) => {
+                                let showMonth = false;
+                                const currentMonth = getMonthLabel(col[0].date);
+                                const prevMonth = colIndex > 0 ? getMonthLabel(columns[colIndex - 1][0].date) : "";
+
+                                if (colIndex === 0 || currentMonth !== prevMonth) {
+                                    // Make sure we have enough gap between month labels (at least 4 weeks/columns apart)
+                                    if (colIndex - lastMonthCol >= 4) {
+                                        showMonth = true;
+                                        lastMonthCol = colIndex;
+                                    }
+                                }
+
+                                return (
+                                    <div key={colIndex} className="flex flex-col gap-1.5 relative group">
+                                        {showMonth && (
+                                            <span className="absolute -top-7 left-0 text-[9px] sm:text-[10px] font-black uppercase text-zinc-400 dark:text-zinc-500 whitespace-nowrap">
+                                                {currentMonth}
+                                            </span>
+                                        )}
+                                        {col.map((day, dayIndex) => (
+                                            <div
+                                                key={dayIndex}
+                                                onMouseEnter={() => setHoveredDay(day)}
+                                                onMouseLeave={() => setHoveredDay(null)}
+                                                className={`w-4 h-4 sm:w-5 sm:h-5 rounded-sm transition-all duration-200 cursor-pointer border border-black/5 dark:border-white/5 hover:scale-150 hover:z-30 hover:shadow-lg rounded-[3px] ${LEVEL_COLORS[day.level as keyof typeof LEVEL_COLORS]}`}
+                                            />
+                                        ))}
+                                    </div>
+                                );
+                            });
+                        })()
                     )}
                 </div>
             </div>

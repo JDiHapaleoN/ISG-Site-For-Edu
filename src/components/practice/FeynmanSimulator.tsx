@@ -82,14 +82,14 @@ export default function FeynmanSimulator() {
                     </p>
                 </div>
 
-                <div className="flex items-center gap-3 w-full md:w-auto">
-                    <div className="flex items-center gap-2 px-4 py-2 bg-fuchsia-50 dark:bg-fuchsia-950/30 border border-fuchsia-100 dark:border-fuchsia-900/30 rounded-xl text-fuchsia-600 dark:text-fuchsia-400 text-sm font-bold">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto mt-4 md:mt-0 min-w-0">
+                    <div className="flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-fuchsia-50 dark:bg-fuchsia-950/30 border border-fuchsia-100 dark:border-fuchsia-900/30 rounded-xl text-fuchsia-600 dark:text-fuchsia-400 text-sm font-bold shrink-0">
                         <Calendar className="w-4 h-4" />
                         Тема дня
                     </div>
 
                     <select
-                        className="flex-1 md:flex-none px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-fuchsia-500 shrink-0"
+                        className="flex-1 px-4 py-3 sm:py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-fuchsia-500 w-full overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
                         value={activeConcept.id}
                         onChange={(e) => {
                             const c = CONCEPTS.find(c => c.id === e.target.value);
