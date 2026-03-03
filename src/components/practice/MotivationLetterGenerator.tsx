@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     FileText, ChevronRight, ChevronLeft, Sparkles, Loader2,
@@ -61,6 +61,12 @@ export default function MotivationLetterGenerator() {
     const [letter, setLetter] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [copied, setCopied] = useState(false);
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    // Scroll to top of component when step changes (critical for mobile)
+    useEffect(() => {
+        containerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, [step]);
 
     const updateField = (field: keyof FormData, value: string) => {
         setForm(prev => ({ ...prev, [field]: value }));
@@ -79,11 +85,16 @@ export default function MotivationLetterGenerator() {
         setLetter(null);
 
         try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 60000); // 60s timeout for slow mobile networks
+
             const res = await fetch("/api/practice/motivation-letter", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(form),
+                signal: controller.signal,
             });
+            clearTimeout(timeout);
 
             if (!res.ok) {
                 const data = await res.json();
@@ -93,7 +104,11 @@ export default function MotivationLetterGenerator() {
             const data = await res.json();
             setLetter(data.letter);
         } catch (err: any) {
-            setError(err.message || "Не удалось сгенерировать письмо");
+            if (err.name === "AbortError") {
+                setError("Время ожидания истекло. Проверьте подключение к интернету и попробуйте ещё раз.");
+            } else {
+                setError(err.message || "Не удалось сгенерировать письмо");
+            }
         } finally {
             setIsGenerating(false);
         }
@@ -101,7 +116,20 @@ export default function MotivationLetterGenerator() {
 
     const handleCopy = async () => {
         if (!letter) return;
-        await navigator.clipboard.writeText(letter);
+        try {
+            await navigator.clipboard.writeText(letter);
+        } catch {
+            // Fallback for mobile Safari and restricted contexts
+            const textarea = document.createElement("textarea");
+            textarea.value = letter;
+            textarea.style.position = "fixed";
+            textarea.style.opacity = "0";
+            document.body.appendChild(textarea);
+            textarea.focus();
+            textarea.select();
+            document.execCommand("copy");
+            document.body.removeChild(textarea);
+        }
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };
@@ -137,7 +165,7 @@ export default function MotivationLetterGenerator() {
     const labelClass = "block text-xs font-black uppercase tracking-widest text-zinc-400 mb-2";
 
     return (
-        <div className="max-w-4xl mx-auto w-full">
+        <div ref={containerRef} className="max-w-4xl mx-auto w-full scroll-mt-20 px-1">
             {/* Header */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
                 <div className="flex items-center gap-4">
@@ -145,7 +173,7 @@ export default function MotivationLetterGenerator() {
                         <FileText className="w-7 h-7 text-white" />
                     </div>
                     <div>
-                        <h2 className="text-2xl md:text-3xl font-black text-zinc-900 dark:text-white">
+                        <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-zinc-900 dark:text-white">
                             Мотивационное письмо
                         </h2>
                         <p className="text-sm text-zinc-500 mt-0.5">
@@ -339,7 +367,12 @@ export default function MotivationLetterGenerator() {
                             </h3>
 
                             <div>
-                                <label className={labelClass}>Почему именно эта специальность? *</label>
+                                <label className={labelClass}>
+                                    Почему именно эта специальность? *
+                                    <span className="text-zinc-300 dark:text-zinc-600 ml-2 normal-case tracking-normal font-medium">
+                                        ({form.whyProgram.trim().length > 0 ? form.whyProgram.trim().split(/\s+/).length : 0} слов)
+                                    </span>
+                                </label>
                                 <textarea
                                     className={inputClass + " min-h-[100px] resize-none"}
                                     placeholder="Что вдохновило вас выбрать эту сферу? Какой опыт или проект подтолкнул вас?"
@@ -430,40 +463,40 @@ export default function MotivationLetterGenerator() {
                                 </div>
                             ) : letter ? (
                                 <>
-                                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                                    <div className="flex flex-col gap-3">
                                         <h3 className="text-lg font-bold text-zinc-900 dark:text-white flex items-center gap-2">
                                             <Sparkles className="w-5 h-5 text-violet-500" />
                                             Ваше мотивационное письмо
                                         </h3>
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex flex-wrap items-center gap-2">
                                             <button
                                                 onClick={handleCopy}
-                                                className="flex items-center gap-1.5 px-3 py-2 bg-zinc-100 dark:bg-zinc-800 rounded-xl text-xs font-bold text-zinc-600 dark:text-zinc-400 hover:text-violet-600 transition-colors"
+                                                className="flex items-center gap-1.5 px-3 py-2.5 bg-violet-100 dark:bg-violet-500/10 rounded-xl text-xs font-bold text-violet-700 dark:text-violet-300 active:scale-95 transition-all"
                                             >
-                                                {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                                                {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
                                                 {copied ? "Скопировано!" : "Копировать"}
                                             </button>
                                             <button
                                                 onClick={handleDownload}
-                                                className="flex items-center gap-1.5 px-3 py-2 bg-zinc-100 dark:bg-zinc-800 rounded-xl text-xs font-bold text-zinc-600 dark:text-zinc-400 hover:text-violet-600 transition-colors"
+                                                className="flex items-center gap-1.5 px-3 py-2.5 bg-zinc-100 dark:bg-zinc-800 rounded-xl text-xs font-bold text-zinc-600 dark:text-zinc-400 active:scale-95 transition-all"
                                             >
-                                                <Download className="w-3.5 h-3.5" />
-                                                Скачать
+                                                <Download className="w-4 h-4" />
+                                                Скачать .txt
                                             </button>
                                             <button
                                                 onClick={handleReset}
-                                                className="flex items-center gap-1.5 px-3 py-2 bg-zinc-100 dark:bg-zinc-800 rounded-xl text-xs font-bold text-zinc-600 dark:text-zinc-400 hover:text-violet-600 transition-colors"
+                                                className="flex items-center gap-1.5 px-3 py-2.5 bg-zinc-100 dark:bg-zinc-800 rounded-xl text-xs font-bold text-zinc-600 dark:text-zinc-400 active:scale-95 transition-all"
                                             >
-                                                <RotateCcw className="w-3.5 h-3.5" />
+                                                <RotateCcw className="w-4 h-4" />
                                                 Заново
                                             </button>
                                         </div>
                                     </div>
 
-                                    <div className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 md:p-8 shadow-inner">
-                                        <pre className="whitespace-pre-wrap font-sans text-sm md:text-base leading-relaxed text-zinc-800 dark:text-zinc-200">
+                                    <div className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 md:p-8 shadow-inner overflow-x-hidden">
+                                        <div className="whitespace-pre-wrap font-sans text-sm md:text-base leading-relaxed text-zinc-800 dark:text-zinc-200 break-words">
                                             {letter}
-                                        </pre>
+                                        </div>
                                     </div>
 
                                     <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/30 rounded-2xl p-4 flex items-start gap-3">
@@ -484,11 +517,11 @@ export default function MotivationLetterGenerator() {
 
             {/* Navigation Buttons */}
             {step < 3 && (
-                <div className="flex items-center justify-between mt-6 gap-4">
+                <div className="flex items-center justify-between mt-6 gap-3 pb-[env(safe-area-inset-bottom)]">
                     <button
                         onClick={() => setStep(s => Math.max(s - 1, 0))}
                         disabled={step === 0}
-                        className="flex items-center gap-2 px-5 py-3 rounded-2xl text-sm font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                        className="flex items-center gap-2 px-4 sm:px-5 py-3.5 rounded-2xl text-sm font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                     >
                         <ChevronLeft className="w-4 h-4" />
                         Назад
@@ -496,12 +529,13 @@ export default function MotivationLetterGenerator() {
                     <button
                         onClick={nextStep}
                         disabled={!canProceed()}
-                        className="flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-violet-500/20 hover:shadow-xl hover:shadow-violet-500/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+                        className="flex items-center gap-2 px-5 sm:px-6 py-3.5 rounded-2xl text-sm font-bold bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-violet-500/20 hover:shadow-xl hover:shadow-violet-500/30 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
                     >
                         {step === 2 ? (
                             <>
                                 <Sparkles className="w-4 h-4" />
-                                Сгенерировать письмо
+                                <span className="hidden sm:inline">Сгенерировать письмо</span>
+                                <span className="sm:hidden">Генерировать</span>
                             </>
                         ) : (
                             <>
