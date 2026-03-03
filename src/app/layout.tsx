@@ -48,7 +48,7 @@ export default function RootLayout({
                 <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
                     <TimerProvider>
                         <NavbarWrapper />
-                        <div className="pt-16 min-h-screen flex flex-col">
+                        <div className="pt-20 sm:pt-24 min-h-screen flex flex-col" style={{ paddingTop: "calc(env(safe-area-inset-top) + 4rem)" }}>
                             {children}
                         </div>
                         <Toaster position="top-right" richColors theme="system" />

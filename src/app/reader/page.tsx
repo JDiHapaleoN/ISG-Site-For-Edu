@@ -52,20 +52,20 @@ export default async function ReaderPage({
 
     return (
         <main className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-4 md:p-6">
-            <div className="max-w-6xl mx-auto mb-8 flex items-center justify-between">
+            <div className="max-w-6xl mx-auto mb-8 md:mb-12 flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6">
                 <div>
-                    <h1 className="text-4xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
+                    <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
                         Умный ридер
                     </h1>
-                    <p className="text-zinc-500 mt-2">
+                    <p className="text-sm sm:text-base text-zinc-500 mt-2 max-w-2xl">
                         Нажмите на любое слово, чтобы перевести его, увидеть контекст или добавить в систему интервальных повторений (SRS).
                     </p>
                 </div>
 
-                <div className="flex gap-2 p-1 bg-zinc-200 dark:bg-zinc-800 rounded-lg">
+                <div className="flex gap-2 p-1 bg-zinc-200 dark:bg-zinc-800 rounded-lg shrink-0 self-start md:self-auto w-full sm:w-auto">
                     <Link
                         href="?lang=german"
-                        className={`px-4 py-2 rounded-md font-semibold transition ${module === "german"
+                        className={`flex-1 text-center sm:flex-none px-3 sm:px-4 py-2 rounded-md text-sm font-semibold transition ${module === "german"
                             ? "bg-white dark:bg-zinc-700 shadow-sm"
                             : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
                             }`}
@@ -74,7 +74,7 @@ export default async function ReaderPage({
                     </Link>
                     <Link
                         href="?lang=english"
-                        className={`px-4 py-2 rounded-md font-semibold transition ${module === "english"
+                        className={`flex-1 text-center sm:flex-none px-3 sm:px-4 py-2 rounded-md text-sm font-semibold transition ${module === "english"
                             ? "bg-white dark:bg-zinc-700 shadow-sm"
                             : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
                             }`}

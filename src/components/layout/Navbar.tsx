@@ -65,8 +65,8 @@ export default function Navbar() {
     return (
         <>
             {/* ─── Top Navigation Bar ─── */}
-            <nav className="fixed top-0 left-0 right-0 h-14 sm:h-16 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-xl border-b border-zinc-200 dark:border-zinc-800 z-50 flex items-center justify-between px-3 sm:px-4 md:px-6"
-                style={{ paddingTop: "env(safe-area-inset-top)" }}
+            <nav className="fixed top-0 left-0 right-0 py-3 sm:py-4 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-xl border-b border-zinc-200 dark:border-zinc-800 z-50 flex items-center justify-between px-3 sm:px-4 md:px-6"
+                style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.75rem)" }}
             >
                 {/* Left: Logo + Desktop Nav */}
                 <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">

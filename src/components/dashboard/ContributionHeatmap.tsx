@@ -69,9 +69,9 @@ export default function ContributionHeatmap() {
             <div className="flex bg-zinc-50 dark:bg-zinc-950/50 p-4 lg:p-6 rounded-3xl border border-zinc-100 dark:border-zinc-800/80 overflow-x-auto scrollbar-hide relative shadow-inner">
 
                 {/* Y-axis Labels */}
-                <div className="flex flex-col gap-1.5 pr-3 lg:pr-4 text-[10px] font-black uppercase text-zinc-400 dark:text-zinc-600 pt-[28px] sticky left-0 bg-zinc-50 dark:bg-[#0c0c0e] z-20">
+                <div className="flex flex-col gap-1.5 pr-2 sm:pr-4 text-[9px] sm:text-[10px] font-black uppercase text-zinc-400 dark:text-zinc-600 pt-[28px] sticky left-0 bg-zinc-50 dark:bg-[#0c0c0e] z-20 shrink-0 border-r border-zinc-100 dark:border-zinc-800/80 mr-2">
                     {DAYS.map((day, i) => (
-                        <span key={i} className="h-4 leading-4 w-4 text-right">{day}</span>
+                        <span key={i} className="h-4 sm:h-5 leading-4 sm:leading-5 w-4 sm:w-5 text-right whitespace-nowrap">{day}</span>
                     ))}
                 </div>
 
@@ -89,7 +89,7 @@ export default function ContributionHeatmap() {
                             return (
                                 <div key={colIndex} className="flex flex-col gap-1.5 relative group">
                                     {showMonth && (
-                                        <span className="absolute -top-7 left-0 text-[10px] font-black uppercase text-zinc-400 dark:text-zinc-500 whitespace-nowrap">
+                                        <span className="absolute -top-7 left-0 text-[9px] sm:text-[10px] font-black uppercase text-zinc-400 dark:text-zinc-500 whitespace-nowrap overflow-hidden text-ellipsis max-w-[40px] sm:max-w-none">
                                             {getMonthLabel(col[0].date)}
                                         </span>
                                     )}
@@ -98,7 +98,7 @@ export default function ContributionHeatmap() {
                                             key={dayIndex}
                                             onMouseEnter={() => setHoveredDay(day)}
                                             onMouseLeave={() => setHoveredDay(null)}
-                                            className={`w-4 h-4 rounded-sm transition-all duration-200 cursor-pointer border border-black/5 dark:border-white/5 hover:scale-150 hover:z-30 hover:shadow-lg ${LEVEL_COLORS[day.level as keyof typeof LEVEL_COLORS]}`}
+                                            className={`w-4 h-4 sm:w-5 sm:h-5 rounded-sm transition-all duration-200 cursor-pointer border border-black/5 dark:border-white/5 hover:scale-150 hover:z-30 hover:shadow-lg rounded-[3px] ${LEVEL_COLORS[day.level as keyof typeof LEVEL_COLORS]}`}
                                         />
                                     ))}
                                 </div>

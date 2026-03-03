@@ -35,22 +35,22 @@ export default function ShadowingPage({
 
     return (
         <main className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-4 md:p-6">
-            <div className="max-w-6xl mx-auto mb-8 flex items-center justify-between">
+            <div className="max-w-6xl mx-auto mb-8 md:mb-12 flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6">
                 <div>
-                    <h1 className="text-4xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50 flex items-center gap-3">
+                    <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50 flex items-center gap-3">
                         Shadowing Studio
-                        <span className="text-xs font-bold uppercase tracking-widest px-2 py-0.5 rounded outline outline-1 outline-indigo-500 text-indigo-500">BETA</span>
+                        <span className="text-[10px] sm:text-xs font-bold uppercase tracking-widest px-1.5 sm:px-2 py-0.5 rounded outline outline-1 outline-indigo-500 text-indigo-500">BETA</span>
                     </h1>
-                    <p className="text-zinc-500 mt-2 max-w-2xl">
+                    <p className="text-sm sm:text-base text-zinc-500 mt-2 max-w-2xl">
                         Listen to the audio and repeat out loud. The active sentence will be highlighted automatically. Click on any word to translate it in context. Use A/B looping to practice specific phrases.
                     </p>
                 </div>
 
                 {/* Gateway toggle for demo purposes */}
-                <div className="flex gap-2 p-1 bg-zinc-200 dark:bg-zinc-800 rounded-lg shrink-0">
+                <div className="flex gap-2 p-1 bg-zinc-200 dark:bg-zinc-800 rounded-lg shrink-0 self-start md:self-auto w-full sm:w-auto">
                     <a
                         href="?lang=german"
-                        className={`px-4 py-2 rounded-md font-semibold transition ${module === "german"
+                        className={`flex-1 text-center sm:flex-none px-3 sm:px-4 py-2 rounded-md text-sm font-semibold transition ${module === "german"
                             ? "bg-white dark:bg-zinc-700 shadow-sm"
                             : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
                             }`}
@@ -59,7 +59,7 @@ export default function ShadowingPage({
                     </a>
                     <a
                         href="?lang=english"
-                        className={`px-4 py-2 rounded-md font-semibold transition ${module === "english"
+                        className={`flex-1 text-center sm:flex-none px-3 sm:px-4 py-2 rounded-md text-sm font-semibold transition ${module === "english"
                             ? "bg-white dark:bg-zinc-700 shadow-sm"
                             : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
                             }`}
