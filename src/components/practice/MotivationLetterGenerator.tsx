@@ -4,21 +4,28 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     FileText, ChevronRight, ChevronLeft, Sparkles, Loader2,
-    Copy, Check, Download, RotateCcw, User, GraduationCap, Target, Send
+    Copy, Check, Download, RotateCcw, User, GraduationCap, Target, Send, Briefcase
 } from "lucide-react";
 
 type FormData = {
     language: "de" | "en";
     fullName: string;
+    dateOfBirth: string;
     country: string;
+    currentEducation: string;
     program: string;
     university: string;
+    degree: string;
+    semester: string;
     gpa: string;
     strongSubjects: string;
     achievements: string;
+    workExperience: string;
+    languages: string;
     whyProgram: string;
     whyCountry: string;
     careerGoals: string;
+    softSkills: string;
     hobbies: string;
     additionalInfo: string;
 };
@@ -26,24 +33,32 @@ type FormData = {
 const INITIAL_FORM: FormData = {
     language: "de",
     fullName: "",
+    dateOfBirth: "",
     country: "",
+    currentEducation: "",
     program: "",
     university: "",
+    degree: "Bachelor",
+    semester: "",
     gpa: "",
     strongSubjects: "",
     achievements: "",
+    workExperience: "",
+    languages: "",
     whyProgram: "",
     whyCountry: "",
     careerGoals: "",
+    softSkills: "",
     hobbies: "",
     additionalInfo: "",
 };
 
 const STEPS = [
     { id: 0, label: "Профиль", icon: User },
-    { id: 1, label: "Достижения", icon: GraduationCap },
-    { id: 2, label: "Мотивация", icon: Target },
-    { id: 3, label: "Результат", icon: Send },
+    { id: 1, label: "Образование", icon: GraduationCap },
+    { id: 2, label: "Опыт", icon: Briefcase },
+    { id: 3, label: "Мотивация", icon: Target },
+    { id: 4, label: "Результат", icon: Send },
 ];
 
 const PROGRAMS = [
@@ -51,7 +66,12 @@ const PROGRAMS = [
     "Betriebswirtschaftslehre (BWL)", "Medizin", "Physik", "Mathematik",
     "Chemie", "Biologie", "Architektur", "Bauingenieurwesen",
     "Mechatronik", "Computer Science", "Business Administration",
-    "Другое (укажите ниже)"
+    "International Relations", "Engineering", "Data Science",
+    "Другое (укажите в доп. информации)"
+];
+
+const SEMESTERS = [
+    "WS 2025/26", "SS 2026", "WS 2026/27", "SS 2027", "WS 2027/28"
 ];
 
 export default function MotivationLetterGenerator() {
@@ -63,7 +83,6 @@ export default function MotivationLetterGenerator() {
     const [copied, setCopied] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
 
-    // Scroll to top of component when step changes (critical for mobile)
     useEffect(() => {
         containerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, [step]);
@@ -74,8 +93,9 @@ export default function MotivationLetterGenerator() {
 
     const canProceed = () => {
         if (step === 0) return form.fullName.trim() && form.program.trim() && form.university.trim();
-        if (step === 1) return true; // optional
-        if (step === 2) return form.whyProgram.trim().length > 10;
+        if (step === 1) return true;
+        if (step === 2) return true;
+        if (step === 3) return form.whyProgram.trim().length > 10;
         return true;
     };
 
@@ -86,7 +106,7 @@ export default function MotivationLetterGenerator() {
 
         try {
             const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 60000); // 60s timeout for slow mobile networks
+            const timeout = setTimeout(() => controller.abort(), 60000);
 
             const res = await fetch("/api/practice/motivation-letter", {
                 method: "POST",
@@ -119,7 +139,6 @@ export default function MotivationLetterGenerator() {
         try {
             await navigator.clipboard.writeText(letter);
         } catch {
-            // Fallback for mobile Safari and restricted contexts
             const textarea = document.createElement("textarea");
             textarea.value = letter;
             textarea.style.position = "fixed";
@@ -152,12 +171,14 @@ export default function MotivationLetterGenerator() {
         setError(null);
     };
 
+    const LAST_FORM_STEP = 3;
+
     const nextStep = () => {
-        if (step === 2) {
-            setStep(3);
+        if (step === LAST_FORM_STEP) {
+            setStep(LAST_FORM_STEP + 1);
             handleGenerate();
         } else {
-            setStep(s => Math.min(s + 1, 3));
+            setStep(s => Math.min(s + 1, LAST_FORM_STEP + 1));
         }
     };
 
@@ -184,17 +205,17 @@ export default function MotivationLetterGenerator() {
             </div>
 
             {/* Progress Steps */}
-            <div className="flex items-center gap-1 mb-8 overflow-x-auto pb-2">
+            <div className="flex items-center gap-0.5 sm:gap-1 mb-8 overflow-x-auto pb-2">
                 {STEPS.map((s, i) => {
                     const Icon = s.icon;
                     const isActive = step === i;
                     const isDone = step > i;
                     return (
-                        <div key={s.id} className="flex items-center gap-1 flex-1 min-w-0">
+                        <div key={s.id} className="flex items-center gap-0.5 sm:gap-1 flex-1 min-w-0">
                             <button
                                 onClick={() => { if (isDone && !isGenerating) setStep(i); }}
                                 disabled={!isDone || isGenerating}
-                                className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap w-full justify-center
+                                className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 rounded-xl text-[10px] sm:text-xs font-bold transition-all whitespace-nowrap w-full justify-center
                                     ${isActive
                                         ? "bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 shadow-sm"
                                         : isDone
@@ -202,11 +223,11 @@ export default function MotivationLetterGenerator() {
                                             : "bg-zinc-100 dark:bg-zinc-800/50 text-zinc-400"
                                     }`}
                             >
-                                {isDone ? <Check className="w-3.5 h-3.5" /> : <Icon className="w-3.5 h-3.5" />}
+                                {isDone ? <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> : <Icon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />}
                                 <span className="hidden sm:inline">{s.label}</span>
                             </button>
                             {i < STEPS.length - 1 && (
-                                <ChevronRight className="w-4 h-4 text-zinc-300 dark:text-zinc-700 flex-shrink-0" />
+                                <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4 text-zinc-300 dark:text-zinc-700 flex-shrink-0" />
                             )}
                         </div>
                     );
@@ -214,9 +235,10 @@ export default function MotivationLetterGenerator() {
             </div>
 
             {/* Step Content */}
-            <div className="bg-white/60 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200 dark:border-zinc-800 rounded-3xl p-5 md:p-8 shadow-xl min-h-[400px]">
+            <div className="bg-white/60 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200 dark:border-zinc-800 rounded-3xl p-4 sm:p-5 md:p-8 shadow-xl min-h-[400px]">
                 <AnimatePresence mode="wait">
-                    {/* Step 0: Profile */}
+
+                    {/* ── Step 0: Personal Info ── */}
                     {step === 0 && (
                         <motion.div
                             key="step0"
@@ -227,35 +249,37 @@ export default function MotivationLetterGenerator() {
                         >
                             <h3 className="text-lg font-bold text-zinc-900 dark:text-white flex items-center gap-2">
                                 <User className="w-5 h-5 text-violet-500" />
-                                Основная информация
+                                Личные данные
                             </h3>
+
+                            {/* Language selector */}
+                            <div>
+                                <label className={labelClass}>Язык письма *</label>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => updateField("language", "de")}
+                                        className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all active:scale-95 ${form.language === "de"
+                                            ? "bg-violet-600 text-white shadow-lg shadow-violet-500/20"
+                                            : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+                                            }`}
+                                    >
+                                        🇩🇪 Deutsch
+                                    </button>
+                                    <button
+                                        onClick={() => updateField("language", "en")}
+                                        className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all active:scale-95 ${form.language === "en"
+                                            ? "bg-violet-600 text-white shadow-lg shadow-violet-500/20"
+                                            : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+                                            }`}
+                                    >
+                                        🇬🇧 English
+                                    </button>
+                                </div>
+                            </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <label className={labelClass}>Язык письма *</label>
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={() => updateField("language", "de")}
-                                            className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${form.language === "de"
-                                                ? "bg-violet-600 text-white shadow-lg shadow-violet-500/20"
-                                                : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
-                                                }`}
-                                        >
-                                            🇩🇪 Deutsch
-                                        </button>
-                                        <button
-                                            onClick={() => updateField("language", "en")}
-                                            className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${form.language === "en"
-                                                ? "bg-violet-600 text-white shadow-lg shadow-violet-500/20"
-                                                : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
-                                                }`}
-                                        >
-                                            🇬🇧 English
-                                        </button>
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className={labelClass}>Ваше полное имя *</label>
+                                    <label className={labelClass}>Полное имя *</label>
                                     <input
                                         className={inputClass}
                                         placeholder="Иван Иванов"
@@ -263,46 +287,51 @@ export default function MotivationLetterGenerator() {
                                         onChange={e => updateField("fullName", e.target.value)}
                                     />
                                 </div>
+                                <div>
+                                    <label className={labelClass}>Дата рождения</label>
+                                    <input
+                                        className={inputClass}
+                                        type="date"
+                                        value={form.dateOfBirth}
+                                        onChange={e => updateField("dateOfBirth", e.target.value)}
+                                    />
+                                </div>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <label className={labelClass}>Страна происхождения</label>
+                                    <label className={labelClass}>Страна / Город</label>
                                     <input
                                         className={inputClass}
-                                        placeholder="Узбекистан / Россия / Казахстан"
+                                        placeholder="Ташкент, Узбекистан"
                                         value={form.country}
                                         onChange={e => updateField("country", e.target.value)}
                                     />
                                 </div>
                                 <div>
-                                    <label className={labelClass}>Целевой ВУЗ *</label>
+                                    <label className={labelClass}>Текущее образование</label>
                                     <input
                                         className={inputClass}
-                                        placeholder="TU München, RWTH Aachen..."
-                                        value={form.university}
-                                        onChange={e => updateField("university", e.target.value)}
+                                        placeholder="Studienkolleg TU München / Лицей №5"
+                                        value={form.currentEducation}
+                                        onChange={e => updateField("currentEducation", e.target.value)}
                                     />
                                 </div>
                             </div>
 
                             <div>
-                                <label className={labelClass}>Программа обучения *</label>
-                                <select
+                                <label className={labelClass}>Владение языками</label>
+                                <input
                                     className={inputClass}
-                                    value={form.program}
-                                    onChange={e => updateField("program", e.target.value)}
-                                >
-                                    <option value="">Выберите программу...</option>
-                                    {PROGRAMS.map(p => (
-                                        <option key={p} value={p}>{p}</option>
-                                    ))}
-                                </select>
+                                    placeholder="Русский (родной), Немецкий (B2/C1), Английский (B2)"
+                                    value={form.languages}
+                                    onChange={e => updateField("languages", e.target.value)}
+                                />
                             </div>
                         </motion.div>
                     )}
 
-                    {/* Step 1: Achievements */}
+                    {/* ── Step 1: Academic Background ── */}
                     {step === 1 && (
                         <motion.div
                             key="step1"
@@ -313,38 +342,86 @@ export default function MotivationLetterGenerator() {
                         >
                             <h3 className="text-lg font-bold text-zinc-900 dark:text-white flex items-center gap-2">
                                 <GraduationCap className="w-5 h-5 text-violet-500" />
-                                Академические достижения
+                                Образование и цель
                             </h3>
-                            <p className="text-sm text-zinc-500 -mt-2">
-                                Чем больше деталей вы укажете, тем более персонализированным будет письмо.
-                            </p>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className={labelClass}>Целевой ВУЗ *</label>
+                                    <input
+                                        className={inputClass}
+                                        placeholder="TU München, RWTH Aachen..."
+                                        value={form.university}
+                                        onChange={e => updateField("university", e.target.value)}
+                                    />
+                                </div>
+                                <div>
+                                    <label className={labelClass}>Программа обучения *</label>
+                                    <select
+                                        className={inputClass}
+                                        value={form.program}
+                                        onChange={e => updateField("program", e.target.value)}
+                                    >
+                                        <option value="">Выберите программу...</option>
+                                        {PROGRAMS.map(p => (
+                                            <option key={p} value={p}>{p}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div>
+                                    <label className={labelClass}>Уровень</label>
+                                    <select
+                                        className={inputClass}
+                                        value={form.degree}
+                                        onChange={e => updateField("degree", e.target.value)}
+                                    >
+                                        <option value="Bachelor">Bachelor</option>
+                                        <option value="Master">Master</option>
+                                        <option value="Studienkolleg">Studienkolleg</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className={labelClass}>Семестр начала</label>
+                                    <select
+                                        className={inputClass}
+                                        value={form.semester}
+                                        onChange={e => updateField("semester", e.target.value)}
+                                    >
+                                        <option value="">Выберите...</option>
+                                        {SEMESTERS.map(s => (
+                                            <option key={s} value={s}>{s}</option>
+                                        ))}
+                                    </select>
+                                </div>
                                 <div>
                                     <label className={labelClass}>Средний балл (GPA)</label>
                                     <input
                                         className={inputClass}
-                                        placeholder="4.5 / 5.0 или 1.8 (немецкая шкала)"
+                                        placeholder="4.5/5.0 или 1.8"
                                         value={form.gpa}
                                         onChange={e => updateField("gpa", e.target.value)}
-                                    />
-                                </div>
-                                <div>
-                                    <label className={labelClass}>Сильные предметы</label>
-                                    <input
-                                        className={inputClass}
-                                        placeholder="Математика, Физика, Информатика"
-                                        value={form.strongSubjects}
-                                        onChange={e => updateField("strongSubjects", e.target.value)}
                                     />
                                 </div>
                             </div>
 
                             <div>
-                                <label className={labelClass}>Достижения, Олимпиады, Стажировки</label>
+                                <label className={labelClass}>Сильные предметы</label>
+                                <input
+                                    className={inputClass}
+                                    placeholder="Математика, Физика, Информатика, Немецкий"
+                                    value={form.strongSubjects}
+                                    onChange={e => updateField("strongSubjects", e.target.value)}
+                                />
+                            </div>
+
+                            <div>
+                                <label className={labelClass}>Олимпиады, конкурсы, сертификаты</label>
                                 <textarea
-                                    className={inputClass + " min-h-[120px] resize-none"}
-                                    placeholder="Призер республиканской олимпиады по математике, стажировка в компании X, проект на GitHub..."
+                                    className={inputClass + " min-h-[90px] resize-none"}
+                                    placeholder="Призёр республиканской олимпиады по математике, сертификат TestDaF C1, участие в Hackathon..."
                                     value={form.achievements}
                                     onChange={e => updateField("achievements", e.target.value)}
                                 />
@@ -352,10 +429,59 @@ export default function MotivationLetterGenerator() {
                         </motion.div>
                     )}
 
-                    {/* Step 2: Motivation */}
+                    {/* ── Step 2: Experience & Skills ── */}
                     {step === 2 && (
                         <motion.div
                             key="step2"
+                            initial={{ opacity: 0, x: 30 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -30 }}
+                            className="flex flex-col gap-5"
+                        >
+                            <h3 className="text-lg font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+                                <Briefcase className="w-5 h-5 text-violet-500" />
+                                Опыт и навыки
+                            </h3>
+                            <p className="text-sm text-zinc-500 -mt-2">
+                                Чем больше деталей, тем более убедительным будет письмо.
+                            </p>
+
+                            <div>
+                                <label className={labelClass}>Опыт работы / стажировки / проекты</label>
+                                <textarea
+                                    className={inputClass + " min-h-[100px] resize-none"}
+                                    placeholder="Стажировка в IT-компании (3 месяца), разработка мобильного приложения, волонтёрство в благотворительной организации..."
+                                    value={form.workExperience}
+                                    onChange={e => updateField("workExperience", e.target.value)}
+                                />
+                            </div>
+
+                            <div>
+                                <label className={labelClass}>Личные качества и soft skills</label>
+                                <input
+                                    className={inputClass}
+                                    placeholder="Командная работа, лидерство, аналитическое мышление, ответственность"
+                                    value={form.softSkills}
+                                    onChange={e => updateField("softSkills", e.target.value)}
+                                />
+                            </div>
+
+                            <div>
+                                <label className={labelClass}>Хобби и внеучебная деятельность</label>
+                                <textarea
+                                    className={inputClass + " min-h-[80px] resize-none"}
+                                    placeholder="Программирование, шахматы, волонтёрство, фотография, капитан школьной футбольной команды..."
+                                    value={form.hobbies}
+                                    onChange={e => updateField("hobbies", e.target.value)}
+                                />
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {/* ── Step 3: Motivation ── */}
+                    {step === 3 && (
+                        <motion.div
+                            key="step3"
                             initial={{ opacity: 0, x: 30 }}
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: -30 }}
@@ -375,48 +501,37 @@ export default function MotivationLetterGenerator() {
                                 </label>
                                 <textarea
                                     className={inputClass + " min-h-[100px] resize-none"}
-                                    placeholder="Что вдохновило вас выбрать эту сферу? Какой опыт или проект подтолкнул вас?"
+                                    placeholder="Что вдохновило вас выбрать эту сферу? Какой конкретный опыт, событие или проект подтолкнул вас к этому выбору?"
                                     value={form.whyProgram}
                                     onChange={e => updateField("whyProgram", e.target.value)}
                                 />
                             </div>
 
                             <div>
-                                <label className={labelClass}>Почему именно этот ВУЗ / страна?</label>
+                                <label className={labelClass}>Почему этот ВУЗ / страна?</label>
                                 <textarea
                                     className={inputClass + " min-h-[80px] resize-none"}
-                                    placeholder="Что привлекает в этом университете? Какие лаборатории, профессора, проекты?"
+                                    placeholder="Конкретные причины: лаборатории, рейтинг программы, конкретный профессор, партнёрские компании, город..."
                                     value={form.whyCountry}
                                     onChange={e => updateField("whyCountry", e.target.value)}
                                 />
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label className={labelClass}>Карьерные цели</label>
-                                    <textarea
-                                        className={inputClass + " min-h-[80px] resize-none"}
-                                        placeholder="Кем вы хотите стать после выпуска? В какой компании / сфере мечтаете работать?"
-                                        value={form.careerGoals}
-                                        onChange={e => updateField("careerGoals", e.target.value)}
-                                    />
-                                </div>
-                                <div>
-                                    <label className={labelClass}>Хобби и интересы</label>
-                                    <textarea
-                                        className={inputClass + " min-h-[80px] resize-none"}
-                                        placeholder="Спорт, музыка, программирование, волонтерство..."
-                                        value={form.hobbies}
-                                        onChange={e => updateField("hobbies", e.target.value)}
-                                    />
-                                </div>
+                            <div>
+                                <label className={labelClass}>Карьерные цели (5-10 лет после окончания)</label>
+                                <textarea
+                                    className={inputClass + " min-h-[80px] resize-none"}
+                                    placeholder="В какой компании / сфере хотите работать? Какую должность мечтаете занять? Хотите вернуться на родину или остаться?"
+                                    value={form.careerGoals}
+                                    onChange={e => updateField("careerGoals", e.target.value)}
+                                />
                             </div>
 
                             <div>
                                 <label className={labelClass}>Дополнительная информация</label>
                                 <input
                                     className={inputClass}
-                                    placeholder="Что-то ещё, что важно упомянуть в письме?"
+                                    placeholder="Особые обстоятельства, семейная связь с профессией, личные истории..."
                                     value={form.additionalInfo}
                                     onChange={e => updateField("additionalInfo", e.target.value)}
                                 />
@@ -424,10 +539,10 @@ export default function MotivationLetterGenerator() {
                         </motion.div>
                     )}
 
-                    {/* Step 3: Result */}
-                    {step === 3 && (
+                    {/* ── Step 4: Result ── */}
+                    {step === 4 && (
                         <motion.div
-                            key="step3"
+                            key="step4"
                             initial={{ opacity: 0, x: 30 }}
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: -30 }}
@@ -442,7 +557,7 @@ export default function MotivationLetterGenerator() {
                                         <Loader2 className="w-6 h-6 text-violet-500 animate-spin absolute -bottom-1 -right-1" />
                                     </div>
                                     <p className="text-sm font-bold text-zinc-500 animate-pulse text-center">
-                                        ИИ пишет ваше мотивационное письмо...
+                                        ИИ пишет ваше мотивационное письмо на {form.language === "en" ? "английском" : "немецком"} языке...
                                     </p>
                                     <p className="text-xs text-zinc-400">
                                         Это может занять 10-20 секунд
@@ -466,7 +581,7 @@ export default function MotivationLetterGenerator() {
                                     <div className="flex flex-col gap-3">
                                         <h3 className="text-lg font-bold text-zinc-900 dark:text-white flex items-center gap-2">
                                             <Sparkles className="w-5 h-5 text-violet-500" />
-                                            Ваше мотивационное письмо
+                                            Ваше мотивационное письмо ({form.language === "en" ? "English" : "Deutsch"})
                                         </h3>
                                         <div className="flex flex-wrap items-center gap-2">
                                             <button
@@ -516,7 +631,7 @@ export default function MotivationLetterGenerator() {
             </div>
 
             {/* Navigation Buttons */}
-            {step < 3 && (
+            {step <= LAST_FORM_STEP && (
                 <div className="flex items-center justify-between mt-6 gap-3 pb-[env(safe-area-inset-bottom)]">
                     <button
                         onClick={() => setStep(s => Math.max(s - 1, 0))}
@@ -531,7 +646,7 @@ export default function MotivationLetterGenerator() {
                         disabled={!canProceed()}
                         className="flex items-center gap-2 px-5 sm:px-6 py-3.5 rounded-2xl text-sm font-bold bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-violet-500/20 hover:shadow-xl hover:shadow-violet-500/30 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
                     >
-                        {step === 2 ? (
+                        {step === LAST_FORM_STEP ? (
                             <>
                                 <Sparkles className="w-4 h-4" />
                                 <span className="hidden sm:inline">Сгенерировать письмо</span>
@@ -547,12 +662,12 @@ export default function MotivationLetterGenerator() {
                 </div>
             )}
 
-            {/* Reset button when on result step */}
-            {step === 3 && letter && (
-                <div className="flex justify-center mt-6">
+            {/* Bottom reset when done */}
+            {step === LAST_FORM_STEP + 1 && letter && (
+                <div className="flex justify-center mt-6 pb-[env(safe-area-inset-bottom)]">
                     <button
                         onClick={handleReset}
-                        className="flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all"
+                        className="flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-95 transition-all"
                     >
                         <RotateCcw className="w-4 h-4" />
                         Создать новое письмо
