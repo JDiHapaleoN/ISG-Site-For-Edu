@@ -1,5 +1,6 @@
 import WritingSimulator from "@/components/practice/WritingSimulator";
 import FeynmanSimulator from "@/components/practice/FeynmanSimulator";
+import MotivationLetterGenerator from "@/components/practice/MotivationLetterGenerator";
 import { PenTool } from "lucide-react";
 
 export const metadata = {
@@ -25,6 +26,10 @@ export default function PracticePage() {
             <div className="max-w-6xl mx-auto w-full h-px bg-zinc-200 dark:bg-zinc-800" />
 
             <FeynmanSimulator />
+
+            <div className="max-w-6xl mx-auto w-full h-px bg-zinc-200 dark:bg-zinc-800" />
+
+            <MotivationLetterGenerator />
 
             <div className="pb-20" />
         </main>
