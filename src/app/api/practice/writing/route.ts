@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { geminiModel } from "@/lib/gemini";
+import { generateContentWithFallback } from "@/lib/gemini";
 import { prisma } from "@/lib/prisma";
 
 import { createClient } from "@/lib/supabase/server";
@@ -67,7 +67,7 @@ Output ONLY a JSON object with this exact structure:
 }
 `;
 
-    const result = await geminiModel.generateContent(`System Prompt: ${systemPrompt}\n\nStudent's essay:\n${text}`);
+    const result = await generateContentWithFallback(`System Prompt: ${systemPrompt}\n\nStudent's essay:\n${text}`, { responseMimeType: "application/json" });
     const responseText = result.response.text();
 
     if (!responseText) {

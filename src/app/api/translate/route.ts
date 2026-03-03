@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { geminiModel } from "@/lib/gemini";
+import { generateContentWithFallback } from "@/lib/gemini";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { ensurePrismaUser } from "@/lib/auth-sync";
@@ -40,7 +40,7 @@ Extract and return exactly the following JSON structure:
 Return only JSON.
 `;
 
-    const result = await geminiModel.generateContent(prompt);
+    const result = await generateContentWithFallback(prompt, { responseMimeType: "application/json" });
     const responseText = result.response.text();
     console.log("Gemini Response:", responseText);
 
