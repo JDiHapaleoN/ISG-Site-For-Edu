@@ -92,18 +92,27 @@ export async function middleware(request: NextRequest) {
             // IP has changed significantly (suspicious session hijack or totally new location)
             // Log them out by removing Supabase auth cookies and the lock
             console.warn(`[Suspicious Activity] IP Hash Mismatch for user ${user.id}. Forcing logout.`);
-            supabase.auth.signOut();
-
-            // Delete cookies in the response
-            request.cookies.getAll().forEach((cookie) => {
-                if (cookie.name.startsWith('sb-') || cookie.name === 'sb-ip-lock') {
-                    supabaseResponse.cookies.delete(cookie.name);
-                }
-            });
+            await supabase.auth.signOut();
 
             const url = request.nextUrl.clone()
             url.pathname = '/login'
             url.searchParams.set('reason', 'ip-changed')
+            const redirectResponse = NextResponse.redirect(url)
+
+            // Delete cookies in the REDIRECT response (not supabaseResponse)
+            request.cookies.getAll().forEach((cookie) => {
+                if (cookie.name.startsWith('sb-') || cookie.name === 'sb-ip-lock') {
+                    redirectResponse.cookies.delete(cookie.name);
+                }
+            });
+
+            return redirectResponse
+        }
+
+        // If user is already logged in and tries to access an auth route, redirect to home
+        if (isAuthRoute) {
+            const url = request.nextUrl.clone()
+            url.pathname = '/'
             return NextResponse.redirect(url)
         }
     }
