@@ -52,10 +52,21 @@ export default function FeynmanSimulator() {
                 const data = await res.json();
                 setFeedback(data.feedback);
                 setSimplicityScore(data.score);
+            } else {
+                let errorMsg = "Неизвестная ошибка сервера.";
+                try {
+                    const errorData = await res.json();
+                    errorMsg = errorData.error || errorMsg;
+                } catch (e) {
+                    errorMsg = res.statusText;
+                }
+                setFeedback(`Ошибка: ${errorMsg}. Пожалуйста, попробуйте снова или немного измените текст.`);
+                setSimplicityScore(0);
             }
         } catch (error) {
             console.error(error);
-            setFeedback("Не удалось обработать объяснение. Пожалуйста, попробуйте снова.");
+            setFeedback("Сбой сети или таймаут соединения. Пожалуйста, попробуйте снова.");
+            setSimplicityScore(0);
         } finally {
             setIsSubmitting(false);
         }
