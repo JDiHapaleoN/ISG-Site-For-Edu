@@ -55,6 +55,11 @@ export async function middleware(request: NextRequest) {
     const { data: { session } } = await supabase.auth.getSession()
     const user = session?.user
 
+    // Skip protection for API routes (they handle their own auth)
+    if (request.nextUrl.pathname.startsWith('/api/')) {
+        return supabaseResponse;
+    }
+
     // Protected Route Redirect Logic
     const isAuthRoute = request.nextUrl.pathname.startsWith('/login') ||
         request.nextUrl.pathname.startsWith('/register') ||
@@ -108,6 +113,14 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
     matcher: [
-        '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+        /*
+         * Match all request paths except:
+         * - _next/static (static files)
+         * - _next/image (image optimization)
+         * - favicon.ico
+         * - Public files (images, manifest, service worker, etc.)
+         * - API routes (they handle their own auth)
+         */
+        '/((?!_next/static|_next/image|favicon\\.ico|manifest\\.json|sw\\.js|workbox-.*\\.js|icons/.*|api/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|json|js|css|woff|woff2|ttf|eot)$).*)',
     ],
 }
