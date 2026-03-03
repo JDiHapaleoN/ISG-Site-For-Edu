@@ -104,6 +104,6 @@ Output ONLY a JSON object with this exact structure:
             );
         }
 
-        return NextResponse.json({ error: "Failed to process Feynman explanation" }, { status: 500 });
+        return NextResponse.json({ error: `Failed to process Feynman explanation: ${error.message}` }, { status: 500 });
     }
 }

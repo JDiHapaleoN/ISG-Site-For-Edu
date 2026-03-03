@@ -116,6 +116,6 @@ Output ONLY a JSON object with this exact structure:
       );
     }
 
-    return NextResponse.json({ error: "Failed to evaluate the text" }, { status: 500 });
+    return NextResponse.json({ error: `Failed to process essay: ${error.message}` }, { status: 500 });
   }
 }
