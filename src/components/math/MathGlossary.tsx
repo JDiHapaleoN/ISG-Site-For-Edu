@@ -28,9 +28,9 @@ export default function MathGlossary() {
         <div className="w-full max-w-6xl mx-auto flex flex-col gap-8">
             {/* Search Header */}
             <div className="bg-white/50 dark:bg-zinc-900/50 backdrop-blur-xl border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-xl w-full">
-                <div className="flex items-center gap-4 mb-6">
-                    <LibraryBig className="w-8 h-8 text-indigo-500" />
-                    <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-purple-500">
+                <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-4 mb-6">
+                    <LibraryBig className="w-6 h-6 sm:w-8 sm:h-8 shrink-0 text-indigo-500" />
+                    <h2 className="text-xl sm:text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-purple-500 leading-tight">
                         Трехъязычный математический глоссарий
                     </h2>
                 </div>

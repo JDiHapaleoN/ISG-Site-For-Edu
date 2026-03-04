@@ -27,14 +27,14 @@ export default function RedemittelLibrary({ categories, module }: Props) {
                 </p>
             </div>
 
-            <div className="flex overflow-x-auto p-2 gap-1 bg-zinc-100/50 dark:bg-zinc-800/30">
+            <div className="flex overflow-x-auto no-scrollbar p-2 gap-1 bg-zinc-100/50 dark:bg-zinc-800/30">
                 {categories.map((cat) => (
                     <button
                         key={cat.id}
                         onClick={() => setActiveTab(cat.id)}
                         className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${activeTab === cat.id
-                                ? "bg-white dark:bg-zinc-700 text-indigo-500 shadow-sm"
-                                : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300"
+                            ? "bg-white dark:bg-zinc-700 text-indigo-500 shadow-sm"
+                            : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300"
                             }`}
                     >
                         {cat.name}

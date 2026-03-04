@@ -44,14 +44,20 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="ru" suppressHydrationWarning>
-            <body className={`${inter.className} bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50`}>
+            <body className={`${inter.className} bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 overflow-x-hidden min-h-[100dvh]`}>
                 <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
                     <TimerProvider>
                         <NavbarWrapper />
-                        <div className="pt-20 sm:pt-24 min-h-screen flex flex-col" style={{ paddingTop: "calc(env(safe-area-inset-top) + 4rem)" }}>
+                        <div
+                            className="min-h-[100dvh] flex flex-col w-full max-w-[100vw] overflow-x-hidden"
+                            style={{
+                                paddingTop: "calc(env(safe-area-inset-top) + 4rem)",
+                                paddingBottom: "calc(env(safe-area-inset-bottom) + 1rem)"
+                            }}
+                        >
                             {children}
                         </div>
-                        <Toaster position="top-right" richColors theme="system" />
+                        <Toaster position="top-center" richColors theme="system" />
                     </TimerProvider>
                 </ThemeProvider>
             </body>

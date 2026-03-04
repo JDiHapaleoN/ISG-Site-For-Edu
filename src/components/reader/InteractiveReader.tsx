@@ -231,7 +231,7 @@ export default function InteractiveReader({ initialText, module }: ReaderProps) 
                         initial={{ opacity: 0, y: 100, x: 0 }}
                         animate={{ opacity: 1, y: 0, x: 0 }}
                         exit={{ opacity: 0, y: 100, x: 0 }}
-                        className="fixed bottom-0 left-0 right-0 z-[60] lg:relative lg:bottom-auto lg:left-auto lg:right-auto lg:z-10 lg:w-80 h-fit max-h-[80vh] bg-white dark:bg-zinc-900 lg:bg-white/80 lg:dark:bg-zinc-900/80 backdrop-blur-2xl border-t lg:border border-zinc-200 dark:border-zinc-800 rounded-t-[2.5rem] lg:rounded-3xl p-6 shadow-[0_-20px_50px_-12px_rgba(0,0,0,0.3)] lg:shadow-2xl flex flex-col gap-4 md:gap-6 overflow-y-auto lg:sticky lg:top-20 font-sans"
+                        className="fixed bottom-0 left-0 right-0 z-[60] lg:relative lg:bottom-auto lg:left-auto lg:right-auto lg:z-10 lg:w-80 h-fit max-h-[80vh] bg-white dark:bg-zinc-900 lg:bg-white/80 lg:dark:bg-zinc-900/80 backdrop-blur-2xl border-t lg:border border-zinc-200 dark:border-zinc-800 rounded-t-[2.5rem] lg:rounded-3xl p-6 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] lg:pb-6 shadow-[0_-20px_50px_-12px_rgba(0,0,0,0.3)] lg:shadow-2xl flex flex-col gap-4 md:gap-6 overflow-y-auto lg:sticky lg:top-20 font-sans"
                     >
                         {/* Drag Handle for Mobile */}
                         <div className="w-12 h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-full mx-auto mb-2 lg:hidden flex-shrink-0" />

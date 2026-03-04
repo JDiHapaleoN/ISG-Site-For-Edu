@@ -30,7 +30,7 @@ export const SPEAKING_TEMPLATES_EN: RedemittelCategory[] = [
             { phrase: "From my perspective...", translation: "С моей точки зрения..." },
             { phrase: "I'm inclined to believe that...", translation: "Я склонен полагать, что..." },
             { phrase: "I'm of the opinion that...", translation: "Я придерживаюсь мнения, что..." },
-            { phrase: "As far as I'm concerned...", translation: "Насколько мне известно / насколько это касается меня..." },
+            { phrase: "As far as I'm concerned...", translation: "Насколько мне известно / лично для меня..." },
             { phrase: "It seems to me that...", translation: "Мне кажется, что..." }
         ]
     },
@@ -56,6 +56,28 @@ export const SPEAKING_TEMPLATES_EN: RedemittelCategory[] = [
             { phrase: "Let me see...", translation: "Дайте подумать..." },
             { phrase: "It's a complex issue, but I suppose...", translation: "Это сложный вопрос, но я полагаю..." }
         ]
+    },
+    {
+        id: "giving-examples",
+        name: "Giving Examples",
+        description: "Clarifying your points with concrete examples (Crucial for Band 7+).",
+        phrases: [
+            { phrase: "To give you an idea...", translation: "Чтобы дать вам представление..." },
+            { phrase: "A prime example of this would be...", translation: "Ярким примером этого могло бы стать..." },
+            { phrase: "Take... for instance", translation: "Возьмем, например, ..." },
+            { phrase: "Namely...", translation: "А именно..." }
+        ]
+    },
+    {
+        id: "conclusion",
+        name: "Summarizing & Concluding",
+        description: "Wrapping up your Part 2 or Part 3 answers neatly.",
+        phrases: [
+            { phrase: "To sum up...", translation: "Подводя итог..." },
+            { phrase: "Ultimately...", translation: "В конечном итоге..." },
+            { phrase: "All things considered...", translation: "Учитывая все обстоятельства..." },
+            { phrase: "Taking everything into consideration...", translation: "Принимая всё во внимание..." }
+        ]
     }
 ];
 
@@ -63,7 +85,7 @@ export const SPEAKING_TEMPLATES_DE: RedemittelCategory[] = [
     {
         id: "intro",
         name: "Einleitung & Strukturierung",
-        description: "Phrasen für den Einstieg in die Antwort oder zur Strukturierung langer Sätze (Aufgabe 3/4).",
+        description: "Phrasen für den Einstieg in die Antwort (Aufgabe 3/4).",
         phrases: [
             { phrase: "Zunächst einmal möchte ich feststellen...", translation: "Прежде всего, я хотел бы констатировать..." },
             { phrase: "Ein wichtiger Aspekt in diesem Zusammenhang ist...", translation: "Важным аспектом в этой связи является..." },
@@ -107,6 +129,17 @@ export const SPEAKING_TEMPLATES_DE: RedemittelCategory[] = [
             { phrase: "Zwar..., aber...", translation: "Хотя..., но..." },
             { phrase: "Es ist zweifelhaft, ob...", translation: "Сомнительно, что..." }
         ]
+    },
+    {
+        id: "examples",
+        name: "Beispiele geben & Begründen",
+        description: "Argumente stützen (Sehr wichtig für TDN 4 und 5).",
+        phrases: [
+            { phrase: "Ein gutes Beispiel dafür ist...", translation: "Хорошим примером этого является..." },
+            { phrase: "Dies lässt sich an folgendem Beispiel veranschaulichen:", translation: "Это можно проиллюстрировать на следующем примере:" },
+            { phrase: "Der Grund dafür liegt in der Tatsache, dass...", translation: "Причина этого заключается в том, что..." },
+            { phrase: "Das liegt vor allem daran, dass...", translation: "Прежде всего это связано с тем, что..." }
+        ]
     }
 ];
 
@@ -118,13 +151,21 @@ export type SpeakingTopic = {
 };
 
 export const SPEAKING_TOPICS_EN: SpeakingTopic[] = [
-    { id: "tech", title: "Technology", question: "How is technology changing the way we communicate?", context: "IELTS Part 3 Style" },
-    { id: "env", title: "Environment", question: "What are the most serious environmental problems in your country?", context: "IELTS Part 3 Style" },
-    { id: "edu", title: "Education", question: "Describe a teacher who has influenced you in your education.", context: "IELTS Part 2 Style" }
+    { id: "tech", title: "Technology", question: "How is technology changing the way we communicate?", context: "Part 3: Evaluation" },
+    { id: "env", title: "Environment", question: "What are the most serious environmental problems in your country?", context: "Part 3: Global Issues" },
+    { id: "edu", title: "Education", question: "Describe a teacher who has influenced you in your education.", context: "Part 2: Description" },
+    { id: "hobbies", title: "Leisure Time", question: "Why do you think some people prefer active hobbies while others prefer passive ones?", context: "Part 3: Comparison" },
+    { id: "travel", title: "Tourism", question: "What are the advantages and disadvantages of mass tourism in historical cities?", context: "Part 3: Argumentation" },
+    { id: "work", title: "Future Careers", question: "Do you think AI will eventually replace most human jobs?", context: "Part 3: Speculation" },
+    { id: "health", title: "Health & Diet", question: "Describe a successful change you made in your lifestyle to improve your health.", context: "Part 2: Description" }
 ];
 
 export const SPEAKING_TOPICS_DE: SpeakingTopic[] = [
-    { id: "studi", title: "Studium", question: "Sollten Studiengebühren eingeführt werden?", context: "TestDaF Aufgabe 4 Style" },
-    { id: "arbeit", title: "Arbeitswelt", question: "Welche Vor- und Nachteile hat das Homeoffice?", context: "TestDaF Aufgabe 4 Style" },
-    { id: "umwelt", title: "Umweltschutz", question: "Welche Rolle spielt der Einzelne beim Klimaschutz?", context: "TestDaF Aufgabe 6 Style" }
+    { id: "studi", title: "Studiengebühren", question: "Sollten Studiengebühren an deutschen Universitäten eingeführt werden?", context: "Aufgabe 4: Diskussion" },
+    { id: "arbeit", title: "Homeoffice", question: "Welche Vor- und Nachteile hat die zunehmende Verbreitung von Homeoffice?", context: "Aufgabe 4: Argumentation" },
+    { id: "umwelt", title: "Klimawandel", question: "Welche Rolle spielt der Einzelne beim Klimaschutz und was kann die Regierung tun?", context: "Aufgabe 6: Hypothesen" },
+    { id: "verkehr", title: "Verkehrsmittel", question: "Wie können wir Menschen dazu motivieren, häufiger öffentliche Verkehrsmittel zu nutzen?", context: "Aufgabe 6: Problemlösung" },
+    { id: "digital", title: "Digitalisierung", question: "Sollten gedruckte Schulbücher komplett durch Tablets ersetzt werden?", context: "Aufgabe 4: Diskussion" },
+    { id: "gesundheit", title: "Gesundheit", question: "Beschreiben Sie eine Grafik über den Fast-Food-Konsum von Jugendlichen.", context: "Aufgabe 3: Grafik" },
+    { id: "wohnen", title: "Wohnungsnot", question: "Welche Maßnahmen könnten gegen die Wohnungsnot in Großstädten ergriffen werden?", context: "Aufgabe 6: Lösungsvorschläge" }
 ];

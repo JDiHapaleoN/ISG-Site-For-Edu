@@ -30,6 +30,21 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  text-wrap: balance;
+}
+
+p,
+li,
+span {
+  text-wrap: pretty;
+}
+
 /* Hide scrollbar but keep scroll functionality */
 .no-scrollbar::-webkit-scrollbar {
   display: none;

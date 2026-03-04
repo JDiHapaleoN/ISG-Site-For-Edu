@@ -29,9 +29,9 @@ export default function AlgorithmBank() {
 
     return (
         <div className="w-full max-w-6xl mx-auto flex flex-col gap-6">
-            <div className="flex items-center gap-4 mb-2">
-                <ListChecks className="w-8 h-8 text-fuchsia-500" />
-                <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-fuchsia-500 to-rose-500">
+            <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-4 mb-2">
+                <ListChecks className="w-6 h-6 sm:w-8 sm:h-8 shrink-0 text-fuchsia-500" />
+                <h2 className="text-xl sm:text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-fuchsia-500 to-rose-500">
                     Банк пошаговых алгоритмов
                 </h2>
             </div>

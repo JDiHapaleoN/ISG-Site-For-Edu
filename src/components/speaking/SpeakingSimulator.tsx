@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { SpeakingTopic, RedemittelCategory } from "@/lib/speaking-data";
-import { Mic, Square, RotateCcw, Send, CheckCircle2, AlertCircle, Play, Globe, HelpCircle } from "lucide-react";
+import { Mic, Square, RotateCcw, Send, CheckCircle2, AlertCircle, Globe, HelpCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 
@@ -35,23 +35,39 @@ export default function SpeakingSimulator({ topics, categories, module }: Props)
 
             recognitionRef.current.onresult = (event: any) => {
                 let interimTranscript = "";
+                let finalTranscriptChunk = "";
+
                 for (let i = event.resultIndex; i < event.results.length; ++i) {
                     if (event.results[i].isFinal) {
-                        setTranscript(prev => prev + " " + event.results[i][0].transcript);
+                        finalTranscriptChunk += event.results[i][0].transcript + " ";
                     } else {
                         interimTranscript += event.results[i][0].transcript;
                     }
+                }
+
+                if (finalTranscriptChunk) {
+                    setTranscript(prev => prev + (prev.endsWith(" ") ? "" : " ") + finalTranscriptChunk.trim());
                 }
             };
 
             recognitionRef.current.onerror = (event: any) => {
                 console.error("Speech recognition error", event.error);
-                if (event.error !== 'no-speech') {
+                if (event.error !== 'no-speech' && event.error !== 'aborted') {
                     toast.error("Ошибка распознавания речи: " + event.error);
-                    stopRecording();
                 }
+                setIsRecording(false);
+            };
+
+            recognitionRef.current.onend = () => {
+                setIsRecording(false);
             };
         }
+
+        return () => {
+            if (recognitionRef.current) {
+                recognitionRef.current.stop();
+            }
+        };
     }, [module]);
 
     const startRecording = () => {
@@ -68,9 +84,13 @@ export default function SpeakingSimulator({ topics, categories, module }: Props)
     };
 
     const stopRecording = () => {
-        setIsRecording(false);
+        setIsRecording(false); // Force state update immediately
         if (recognitionRef.current) {
-            recognitionRef.current.stop();
+            try {
+                recognitionRef.current.abort(); // Force abort instead of soft stop
+            } catch (e) {
+                console.error("Error aborting recognition", e);
+            }
         }
     };
 
@@ -175,10 +195,15 @@ export default function SpeakingSimulator({ topics, categories, module }: Props)
                                 </p>
                             </div>
 
-                            <div className="flex items-center justify-between gap-4">
+                            <div className="flex flex-wrap items-center justify-between gap-4">
                                 <button
-                                    onClick={() => { setTranscript(""); stopRecording(); setAnalysisResult(null); }}
-                                    className="p-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-xl hover:bg-zinc-200 transition-all"
+                                    onClick={() => {
+                                        if (recognitionRef.current) recognitionRef.current.abort();
+                                        setIsRecording(false);
+                                        setTranscript("");
+                                        setAnalysisResult(null);
+                                    }}
+                                    className="p-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-xl hover:bg-zinc-200 transition-all shrink-0"
                                     title="Сбросить"
                                 >
                                     <RotateCcw className="w-5 h-5" />
