@@ -117,7 +117,7 @@ export default function SrsReview({ module }: SrsReviewProps) {
 
       {/* Flashcard Area */}
       <div
-        className="relative w-full aspect-[4/3] perspective-1000"
+        className="relative w-full h-[450px] sm:h-[400px] md:h-[450px] perspective-1000"
       >
         <AnimatePresence mode="wait">
           {!isFlipped ? (
@@ -127,16 +127,16 @@ export default function SrsReview({ module }: SrsReviewProps) {
               animate={{ rotateY: 0, opacity: 1 }}
               exit={{ rotateY: 90, opacity: 0 }}
               transition={{ duration: 0.3 }}
-              className="absolute inset-0 w-full h-full backface-hidden flex flex-col items-center justify-center bg-white dark:bg-zinc-900 border-2 border-zinc-200 dark:border-zinc-800 rounded-3xl shadow-xl p-8 cursor-pointer hover:border-indigo-300 transition-colors"
+              className="absolute inset-0 w-full h-full backface-hidden flex flex-col items-center justify-center bg-white dark:bg-zinc-900 border-2 border-zinc-200 dark:border-zinc-800 rounded-3xl shadow-xl p-6 md:p-8 cursor-pointer hover:border-indigo-300 transition-colors overflow-hidden"
               onClick={() => setIsFlipped(true)}
             >
               <div className="flex flex-col items-center text-center gap-4">
                 {module === "german" && (card as GermanWord).article && (
-                  <span className="text-2xl font-bold text-pink-500 uppercase tracking-widest">
+                  <span className="text-xl md:text-2xl font-bold text-pink-500 uppercase tracking-widest shrink-0">
                     {(card as GermanWord).article}
                   </span>
                 )}
-                <h2 className="text-5xl md:text-6xl font-black text-zinc-900 dark:text-zinc-100">
+                <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-zinc-900 dark:text-zinc-100 break-words w-full px-2 leading-tight">
                   {card.term}
                 </h2>
 
@@ -152,17 +152,17 @@ export default function SrsReview({ module }: SrsReviewProps) {
               animate={{ rotateY: 0, opacity: 1 }}
               exit={{ rotateY: 90, opacity: 0 }}
               transition={{ duration: 0.3 }}
-              className="absolute inset-0 w-full h-full backface-hidden flex flex-col items-center justify-center bg-white dark:bg-zinc-900 border-2 border-indigo-200 dark:border-indigo-800 rounded-3xl shadow-xl p-8"
+              className="absolute inset-0 w-full h-full backface-hidden flex flex-col items-center justify-start bg-white dark:bg-zinc-900 border-2 border-indigo-200 dark:border-indigo-800 rounded-3xl shadow-xl p-5 md:p-8 overflow-y-auto"
             >
-              <div className="flex flex-col items-center text-center gap-6 w-full max-w-md">
-                <p className="text-sm font-bold tracking-widest text-indigo-500 uppercase">Перевод</p>
-                <h3 className="text-4xl font-bold text-zinc-900 dark:text-zinc-100">
+              <div className="flex flex-col items-center text-center gap-4 md:gap-6 w-full max-w-md my-auto">
+                <p className="text-[10px] md:text-sm font-bold tracking-widest text-indigo-500 uppercase shrink-0">Перевод</p>
+                <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold text-zinc-900 dark:text-zinc-100 break-words w-full leading-tight shrink-0">
                   {card.translation}
                 </h3>
 
                 {card.contextTranslation && (
-                  <div className="mt-4 p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-800/50 text-left w-full border border-zinc-200 dark:border-zinc-800">
-                    <p className="text-sm font-serif italic text-zinc-600 dark:text-zinc-300 mb-2">
+                  <div className="mt-2 md:mt-4 p-3 md:p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-800/50 text-left w-full border border-zinc-200 dark:border-zinc-800 shrink-0">
+                    <p className="text-xs md:text-sm font-serif italic text-zinc-600 dark:text-zinc-300 mb-1.5 md:mb-2 leading-relaxed">
                       “{card.context}”
                     </p>
                     <p className="text-sm font-medium text-zinc-500">
@@ -172,7 +172,7 @@ export default function SrsReview({ module }: SrsReviewProps) {
                 )}
 
                 {card.mnemonic && (
-                  <div className="mt-2 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 px-4 py-2 rounded-xl">
+                  <div className="mt-1 md:mt-2 text-[11px] sm:text-xs md:text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 px-3 md:px-4 py-2 md:py-2 rounded-xl shrink-0 leading-relaxed">
                     💡 {card.mnemonic}
                   </div>
                 )}
@@ -188,45 +188,45 @@ export default function SrsReview({ module }: SrsReviewProps) {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="w-full mt-8"
+            className="w-full mt-4 md:mt-8 shrink-0 pb-[env(safe-area-inset-bottom)]"
           >
-            <p className="text-center text-sm font-medium text-zinc-500 mb-4 uppercase tracking-wider">Насколько хорошо вы это знали?</p>
-            <div className="grid grid-cols-4 gap-3">
+            <p className="text-center text-[10px] md:text-sm font-medium text-zinc-500 mb-3 md:mb-4 uppercase tracking-wider">Насколько хорошо вы это знали?</p>
+            <div className="grid grid-cols-4 gap-2 md:gap-3">
               <button
                 onClick={() => handleReview(1)}
                 disabled={isSubmitting}
-                className="flex flex-col items-center gap-1 p-3 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/30 dark:hover:bg-rose-900/50 dark:text-rose-400 transition-colors"
+                className="flex flex-col items-center gap-0.5 md:gap-1 p-2 md:p-3 rounded-xl md:rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/30 dark:hover:bg-rose-900/50 dark:text-rose-400 transition-colors"
                 title="Забыл полностью (1)"
               >
-                <span className="font-bold text-lg">Снова</span>
-                <span className="text-[10px] opacity-70">1 мин</span>
+                <span className="font-bold text-sm sm:text-base md:text-lg">Снова</span>
+                <span className="text-[9px] md:text-[10px] opacity-70">1 мин</span>
               </button>
               <button
                 onClick={() => handleReview(3)}
                 disabled={isSubmitting}
-                className="flex flex-col items-center gap-1 p-3 rounded-2xl bg-amber-50 hover:bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:hover:bg-amber-900/50 dark:text-amber-400 transition-colors"
+                className="flex flex-col items-center gap-0.5 md:gap-1 p-2 md:p-3 rounded-xl md:rounded-2xl bg-amber-50 hover:bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:hover:bg-amber-900/50 dark:text-amber-400 transition-colors"
                 title="Трудно вспомнить (3)"
               >
-                <span className="font-bold text-lg">Сложно</span>
-                <span className="text-[10px] opacity-70">10 мин</span>
+                <span className="font-bold text-sm sm:text-base md:text-lg">Сложно</span>
+                <span className="text-[9px] md:text-[10px] opacity-70">10 мин</span>
               </button>
               <button
                 onClick={() => handleReview(4)}
                 disabled={isSubmitting}
-                className="flex flex-col items-center gap-1 p-3 rounded-2xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:hover:bg-emerald-900/50 dark:text-emerald-400 transition-colors"
+                className="flex flex-col items-center gap-0.5 md:gap-1 p-2 md:p-3 rounded-xl md:rounded-2xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:hover:bg-emerald-900/50 dark:text-emerald-400 transition-colors"
                 title="Вспомнил с запинкой (4)"
               >
-                <span className="font-bold text-lg">Хорошо</span>
-                <span className="text-[10px] opacity-70">1 день</span>
+                <span className="font-bold text-sm sm:text-base md:text-lg">Хорошо</span>
+                <span className="text-[9px] md:text-[10px] opacity-70">1 день</span>
               </button>
               <button
                 onClick={() => handleReview(5)}
                 disabled={isSubmitting}
-                className="flex flex-col items-center gap-1 p-3 rounded-2xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/30 dark:hover:bg-indigo-900/50 dark:text-indigo-400 transition-colors"
+                className="flex flex-col items-center gap-0.5 md:gap-1 p-2 md:p-3 rounded-xl md:rounded-2xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/30 dark:hover:bg-indigo-900/50 dark:text-indigo-400 transition-colors"
                 title="Идеально (5)"
               >
-                <span className="font-bold text-lg">Легко</span>
-                <span className="text-[10px] opacity-70">4 дня</span>
+                <span className="font-bold text-sm sm:text-base md:text-lg">Легко</span>
+                <span className="text-[9px] md:text-[10px] opacity-70">4 дня</span>
               </button>
             </div>
           </motion.div>
