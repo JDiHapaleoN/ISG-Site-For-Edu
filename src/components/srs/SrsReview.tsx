@@ -74,6 +74,34 @@ export default function SrsReview({ module }: SrsReviewProps) {
     });
   };
 
+  const handleRequeue = () => {
+    if (cards.length === 0 || isSubmitting) return;
+    setIsSubmitting(true);
+
+    const currentCard = cards[currentIndex];
+
+    // Optimistically update the UI: Add this card to the END of the array
+    setCards(prev => [...prev, currentCard]);
+
+    // Move to next card
+    setCurrentIndex(currentIndex + 1);
+    setIsFlipped(false);
+    setTimeout(() => setIsSubmitting(false), 300);
+
+    // Call API with quality = 1 (1 minute penalty) in the background
+    fetch("/api/srs/review", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        wordId: currentCard.id,
+        quality: 1,
+        module,
+      }),
+    }).catch(error => {
+      console.error("API error during requeue review", error);
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center p-12 text-zinc-500">
@@ -191,43 +219,55 @@ export default function SrsReview({ module }: SrsReviewProps) {
             className="w-full mt-4 md:mt-8 shrink-0 pb-[env(safe-area-inset-bottom)]"
           >
             <p className="text-center text-[10px] md:text-sm font-medium text-zinc-500 mb-3 md:mb-4 uppercase tracking-wider">Насколько хорошо вы это знали?</p>
-            <div className="grid grid-cols-4 gap-2 md:gap-3">
+
+            <div className="flex flex-col gap-2 md:gap-3">
               <button
-                onClick={() => handleReview(1)}
+                onClick={handleRequeue}
                 disabled={isSubmitting}
-                className="flex flex-col items-center gap-0.5 md:gap-1 p-2 md:p-3 rounded-xl md:rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/30 dark:hover:bg-rose-900/50 dark:text-rose-400 transition-colors"
-                title="Забыл полностью (1)"
+                className="w-full py-2.5 md:py-3 bg-zinc-100 dark:bg-zinc-800/80 hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-[0.98] rounded-xl md:rounded-2xl text-zinc-700 dark:text-zinc-300 transition-all font-bold text-xs md:text-sm flex items-center justify-center gap-2 border border-zinc-200 dark:border-zinc-700"
+                title="Повторить в конце этой же сессии"
               >
-                <span className="font-bold text-sm sm:text-base md:text-lg">Снова</span>
-                <span className="text-[9px] md:text-[10px] opacity-70">1 мин</span>
+                🔄 Добавить в конец очереди
               </button>
-              <button
-                onClick={() => handleReview(3)}
-                disabled={isSubmitting}
-                className="flex flex-col items-center gap-0.5 md:gap-1 p-2 md:p-3 rounded-xl md:rounded-2xl bg-amber-50 hover:bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:hover:bg-amber-900/50 dark:text-amber-400 transition-colors"
-                title="Трудно вспомнить (3)"
-              >
-                <span className="font-bold text-sm sm:text-base md:text-lg">Сложно</span>
-                <span className="text-[9px] md:text-[10px] opacity-70">10 мин</span>
-              </button>
-              <button
-                onClick={() => handleReview(4)}
-                disabled={isSubmitting}
-                className="flex flex-col items-center gap-0.5 md:gap-1 p-2 md:p-3 rounded-xl md:rounded-2xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:hover:bg-emerald-900/50 dark:text-emerald-400 transition-colors"
-                title="Вспомнил с запинкой (4)"
-              >
-                <span className="font-bold text-sm sm:text-base md:text-lg">Хорошо</span>
-                <span className="text-[9px] md:text-[10px] opacity-70">1 день</span>
-              </button>
-              <button
-                onClick={() => handleReview(5)}
-                disabled={isSubmitting}
-                className="flex flex-col items-center gap-0.5 md:gap-1 p-2 md:p-3 rounded-xl md:rounded-2xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/30 dark:hover:bg-indigo-900/50 dark:text-indigo-400 transition-colors"
-                title="Идеально (5)"
-              >
-                <span className="font-bold text-sm sm:text-base md:text-lg">Легко</span>
-                <span className="text-[9px] md:text-[10px] opacity-70">4 дня</span>
-              </button>
+
+              <div className="grid grid-cols-4 gap-2 md:gap-3">
+                <button
+                  onClick={() => handleReview(1)}
+                  disabled={isSubmitting}
+                  className="flex flex-col items-center gap-0.5 md:gap-1 p-2 md:p-3 rounded-xl md:rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/30 dark:hover:bg-rose-900/50 dark:text-rose-400 transition-colors"
+                  title="Забыл полностью (1)"
+                >
+                  <span className="font-bold text-sm sm:text-base md:text-lg">Снова</span>
+                  <span className="text-[9px] md:text-[10px] opacity-70">1 мин</span>
+                </button>
+                <button
+                  onClick={() => handleReview(3)}
+                  disabled={isSubmitting}
+                  className="flex flex-col items-center gap-0.5 md:gap-1 p-2 md:p-3 rounded-xl md:rounded-2xl bg-amber-50 hover:bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:hover:bg-amber-900/50 dark:text-amber-400 transition-colors"
+                  title="Трудно вспомнить (3)"
+                >
+                  <span className="font-bold text-sm sm:text-base md:text-lg">Сложно</span>
+                  <span className="text-[9px] md:text-[10px] opacity-70">10 мин</span>
+                </button>
+                <button
+                  onClick={() => handleReview(4)}
+                  disabled={isSubmitting}
+                  className="flex flex-col items-center gap-0.5 md:gap-1 p-2 md:p-3 rounded-xl md:rounded-2xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:hover:bg-emerald-900/50 dark:text-emerald-400 transition-colors"
+                  title="Вспомнил с запинкой (4)"
+                >
+                  <span className="font-bold text-sm sm:text-base md:text-lg">Хорошо</span>
+                  <span className="text-[9px] md:text-[10px] opacity-70">1 день</span>
+                </button>
+                <button
+                  onClick={() => handleReview(5)}
+                  disabled={isSubmitting}
+                  className="flex flex-col items-center gap-0.5 md:gap-1 p-2 md:p-3 rounded-xl md:rounded-2xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/30 dark:hover:bg-indigo-900/50 dark:text-indigo-400 transition-colors"
+                  title="Идеально (5)"
+                >
+                  <span className="font-bold text-sm sm:text-base md:text-lg">Легко</span>
+                  <span className="text-[9px] md:text-[10px] opacity-70">4 дня</span>
+                </button>
+              </div>
             </div>
           </motion.div>
         )}

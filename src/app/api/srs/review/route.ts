@@ -18,21 +18,37 @@ function calculateSm2(
     interval: number
 ) {
     let newRepetitions = repetitions;
-    let newInterval = interval;
+    let newInterval = interval; // in days
     let newEasiness = easiness;
 
-    if (quality >= 3) {
+    if (quality === 1 || quality === 0) {
+        newRepetitions = 0;
+        newInterval = 1 / (24 * 60); // 1 minute in days
+    } else if (quality === 3) {
+        if (repetitions === 0) {
+            newInterval = 10 / (24 * 60); // 10 minutes in days
+        } else {
+            newInterval = Math.max(1, Math.round(interval * 1.2));
+        }
+        newRepetitions = Math.max(0, repetitions - 1);
+    } else if (quality === 4) {
         if (repetitions === 0) {
             newInterval = 1;
         } else if (repetitions === 1) {
-            newInterval = 6;
+            newInterval = 3;
         } else {
             newInterval = Math.round(interval * easiness);
         }
         newRepetitions += 1;
-    } else {
-        newRepetitions = 0;
-        newInterval = 1;
+    } else if (quality >= 5) {
+        if (repetitions === 0) {
+            newInterval = 4;
+        } else if (repetitions === 1) {
+            newInterval = 6;
+        } else {
+            newInterval = Math.round(interval * easiness * 1.3);
+        }
+        newRepetitions += 1;
     }
 
     newEasiness = easiness + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
@@ -86,9 +102,9 @@ export async function POST(req: Request) {
             word.interval
         );
 
-        // 3. Calculate next review date (current date + newInterval days)
-        const nextReviewDate = new Date();
-        nextReviewDate.setDate(nextReviewDate.getDate() + newInterval);
+        // 3. Calculate next review date (current date + newInterval in days)
+        // Add fractional days as milliseconds to preserve minute-level accuracy
+        const nextReviewDate = new Date(Date.now() + newInterval * 24 * 60 * 60 * 1000);
 
         // 4. Update the word in the database
         // @ts-ignore
