@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Home, BookOpen, Headphones, Layers, Sigma, PenTool, CalendarCheck, User as UserIcon, LogOut, GraduationCap, Menu, X } from "lucide-react";
+import { Home, BookOpen, Headphones, Mic, Layers, Sigma, PenTool, CalendarCheck, User as UserIcon, LogOut, GraduationCap, Menu, X } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { createClient } from "@/lib/supabase/client";
 import { User } from "@supabase/supabase-js";
@@ -14,6 +14,7 @@ const NAV_ITEMS = [
     { href: "/", label: "Главная", icon: Home },
     { href: "/reader", label: "Ридер", icon: BookOpen },
     { href: "/shadowing", label: "Шэдоуинг", icon: Headphones },
+    { href: "/speaking", label: "Говорение", icon: Mic },
     { href: "/review", label: "Словарь", icon: Layers },
     { href: "/math", label: "Матем.", icon: Sigma },
     { href: "/practice", label: "Тренажеры", icon: PenTool },
