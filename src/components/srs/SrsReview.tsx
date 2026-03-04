@@ -1,15 +1,38 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { BrainCircuit, Check, X, Eye, Loader2, ArrowRight, Trash2 } from "lucide-react";
 import { EnglishWord, GermanWord } from "@prisma/client";
+import { toast } from "sonner";
 
 interface SrsReviewProps {
   module: "english" | "german";
 }
 
 type CardData = EnglishWord | GermanWord;
+
+// Retry helper: tries fetch up to `retries` times with `delayMs` between
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit,
+  retries = 2,
+  delayMs = 1000
+): Promise<Response> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url, options);
+      if (res.ok || res.status === 400 || res.status === 401 || res.status === 404) {
+        return res; // Don't retry client errors
+      }
+      throw new Error(`Server error: ${res.status}`);
+    } catch (error) {
+      if (attempt === retries) throw error;
+      await new Promise(r => setTimeout(r, delayMs));
+    }
+  }
+  throw new Error("Retry exhausted");
+}
 
 export default function SrsReview({ module }: SrsReviewProps) {
   const [cards, setCards] = useState<CardData[]>([]);
@@ -40,66 +63,83 @@ export default function SrsReview({ module }: SrsReviewProps) {
   };
 
   const handleReview = async (quality: number) => {
-    if (cards.length === 0) return;
-
-    // Prevent double rapid clicks on the same card but don't block between cards
-    if (isSubmitting) return;
-    setIsSubmitting(true);
-
-    const currentCard = cards[currentIndex];
-
-    // Optimistically update the UI to move to the next card IMMEDIATELY
-    const nextIndex = currentIndex + 1;
-    if (nextIndex < cards.length) {
-      setCurrentIndex(nextIndex);
-      setIsFlipped(false);
-      // Brief delay to allow UI to transition before lifting the submission lock
-      setTimeout(() => setIsSubmitting(false), 300);
-    } else {
-      setSessionComplete(true);
-      setIsSubmitting(false);
-    }
-
-    // Fire the API call in the background without `await`
-    fetch("/api/srs/review", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        wordId: currentCard.id,
-        quality,
-        module,
-      }),
-    }).catch(error => {
-      console.error("API error during review", error);
-    });
-  };
-
-  const handleRequeue = () => {
     if (cards.length === 0 || isSubmitting) return;
     setIsSubmitting(true);
 
     const currentCard = cards[currentIndex];
+    const prevIndex = currentIndex;
+    const prevFlipped = isFlipped;
 
-    // Optimistically update the UI: Add this card to the END of the array
+    // Optimistically advance to the next card
+    const nextIndex = currentIndex + 1;
+    const isLast = nextIndex >= cards.length;
+
+    if (isLast) {
+      setSessionComplete(true);
+    } else {
+      setCurrentIndex(nextIndex);
+      setIsFlipped(false);
+    }
+
+    // Fire API call with retry
+    try {
+      await fetchWithRetry("/api/srs/review", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          wordId: currentCard.id,
+          quality,
+          module,
+        }),
+      });
+    } catch (error) {
+      console.error("SRS review failed after retries:", error);
+      // Rollback UI state
+      if (isLast) {
+        setSessionComplete(false);
+      }
+      setCurrentIndex(prevIndex);
+      setIsFlipped(prevFlipped);
+      toast.error("Ошибка сети. Повтор не сохранён. Попробуйте снова.");
+    } finally {
+      setTimeout(() => setIsSubmitting(false), 300);
+    }
+  };
+
+  const handleRequeue = async () => {
+    if (cards.length === 0 || isSubmitting) return;
+    setIsSubmitting(true);
+
+    const currentCard = cards[currentIndex];
+    const prevIndex = currentIndex;
+    const prevCards = [...cards];
+
+    // Optimistically: add card to end and advance
     setCards(prev => [...prev, currentCard]);
-
-    // Move to next card
     setCurrentIndex(currentIndex + 1);
     setIsFlipped(false);
-    setTimeout(() => setIsSubmitting(false), 300);
 
-    // Call API with quality = 1 (1 minute penalty) in the background
-    fetch("/api/srs/review", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        wordId: currentCard.id,
-        quality: 1,
-        module,
-      }),
-    }).catch(error => {
-      console.error("API error during requeue review", error);
-    });
+    // Fire API call with retry
+    try {
+      await fetchWithRetry("/api/srs/review", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          wordId: currentCard.id,
+          quality: 1,
+          module,
+        }),
+      });
+    } catch (error) {
+      console.error("SRS requeue failed after retries:", error);
+      // Rollback
+      setCards(prevCards);
+      setCurrentIndex(prevIndex);
+      setIsFlipped(true);
+      toast.error("Ошибка сети. Карточка не добавлена в очередь.");
+    } finally {
+      setTimeout(() => setIsSubmitting(false), 300);
+    }
   };
 
   if (isLoading) {

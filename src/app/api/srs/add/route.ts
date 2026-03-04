@@ -2,15 +2,35 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { ensurePrismaUser } from "@/lib/auth-sync";
+import { srsAddSchema, englishWordSchema, germanWordSchema } from "@/lib/validations";
 
 export async function POST(req: Request) {
     try {
-        const { wordData, module } = await req.json();
+        const body = await req.json();
 
-        if (!wordData || !module) {
-            return NextResponse.json({ error: "Missing data or module" }, { status: 400 });
+        // 1. Base validation
+        const baseParsed = srsAddSchema.safeParse(body);
+        if (!baseParsed.success) {
+            return NextResponse.json(
+                { error: "Validation failed", details: baseParsed.error.flatten().fieldErrors },
+                { status: 400 }
+            );
         }
 
+        const { module } = baseParsed.data;
+
+        // 2. Per-module word validation
+        const wordSchema = module === "english" ? englishWordSchema : germanWordSchema;
+        const wordParsed = wordSchema.safeParse(body.wordData);
+        if (!wordParsed.success) {
+            return NextResponse.json(
+                { error: "Word data validation failed", details: wordParsed.error.flatten().fieldErrors },
+                { status: 400 }
+            );
+        }
+        const wordData = wordParsed.data;
+
+        // 3. Authenticate
         const supabase = createClient();
         const { data: { user: supabaseUser } } = await supabase.auth.getUser();
 
@@ -23,6 +43,7 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "User sync failed" }, { status: 500 });
         }
 
+        // 4. Create word
         if (module === "english") {
             let deck = await prisma.englishDeck.findFirst({ where: { userId: user.id } });
             if (!deck) {
@@ -37,7 +58,7 @@ export async function POST(req: Request) {
                     userId: user.id,
                     term: wordData.term,
                     translation: wordData.translation,
-                    transcription: wordData.transcription,
+                    transcription: (wordData as any).transcription,
                     context: wordData.context,
                     contextTranslation: wordData.contextTranslation,
                     mnemonic: wordData.mnemonic,
@@ -46,7 +67,7 @@ export async function POST(req: Request) {
             });
             return NextResponse.json({ success: true, word: newWord });
 
-        } else if (module === "german") {
+        } else {
             let deck = await prisma.germanDeck.findFirst({ where: { userId: user.id } });
             if (!deck) {
                 deck = await prisma.germanDeck.create({
@@ -60,8 +81,8 @@ export async function POST(req: Request) {
                     userId: user.id,
                     term: wordData.term,
                     translation: wordData.translation,
-                    article: wordData.article,
-                    pluralForm: wordData.pluralForm,
+                    article: (wordData as any).article,
+                    pluralForm: (wordData as any).pluralForm,
                     context: wordData.context,
                     contextTranslation: wordData.contextTranslation,
                     mnemonic: wordData.mnemonic,
@@ -70,10 +91,8 @@ export async function POST(req: Request) {
             });
             return NextResponse.json({ success: true, word: newWord });
         }
-
-        return NextResponse.json({ error: "Invalid module" }, { status: 400 });
     } catch (error: any) {
-        console.error("SRS Add Error:", error);
+        console.error("[SRS Add] Error:", error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }

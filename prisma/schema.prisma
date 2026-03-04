@@ -81,7 +81,7 @@ model EnglishWord {
 
   // SRS (SuperMemo-2) tracking
   nextReview         DateTime  @default(now())
-  interval           Int       @default(0)   // Days until next review
+  interval           Float     @default(0)   // Days until next review (supports fractional for minutes)
   easiness           Float     @default(2.5) // SM-2 Easiness factor
   srsStep            Int       @default(0)   // Exact number of successful reps
   
@@ -134,7 +134,7 @@ model GermanWord {
 
   // SRS (SuperMemo-2) tracking
   nextReview         DateTime  @default(now())
-  interval           Int       @default(0)
+  interval           Float     @default(0)
   easiness           Float     @default(2.5)
   srsStep            Int       @default(0)
   

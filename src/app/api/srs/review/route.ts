@@ -2,15 +2,9 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { ensurePrismaUser } from "@/lib/auth-sync";
+import { srsReviewSchema } from "@/lib/validations";
 
-// SuperMemo-2 Algorithm Helper
-// Takes current SRS stats and a quality rating (0-5), returns new stats
-// 0: Complete blackout
-// 1: Incorrect response; correct one remembered
-// 2: Incorrect response; correct one seemed easy to recall
-// 3: Correct response recalled with serious difficulty
-// 4: Correct response after a hesitation
-// 5: Perfect response
+// SuperMemo-2 Algorithm Helper (server-only)
 function calculateSm2(
     quality: number,
     repetitions: number,
@@ -18,7 +12,7 @@ function calculateSm2(
     interval: number
 ) {
     let newRepetitions = repetitions;
-    let newInterval = interval; // in days
+    let newInterval = interval; // in days (supports fractional)
     let newEasiness = easiness;
 
     if (quality === 1 || quality === 0) {
@@ -59,12 +53,20 @@ function calculateSm2(
 
 export async function POST(req: Request) {
     try {
-        const { wordId, quality, module } = await req.json();
+        // 1. Validate input with Zod
+        const body = await req.json();
+        const parsed = srsReviewSchema.safeParse(body);
 
-        if (!wordId || quality === undefined || typeof quality !== "number" || !module) {
-            return NextResponse.json({ error: "Missing or invalid required fields" }, { status: 400 });
+        if (!parsed.success) {
+            return NextResponse.json(
+                { error: "Validation failed", details: parsed.error.flatten().fieldErrors },
+                { status: 400 }
+            );
         }
 
+        const { wordId, quality, module } = parsed.data;
+
+        // 2. Authenticate
         const supabase = createClient();
         const { data: { user: supabaseUser } } = await supabase.auth.getUser();
 
@@ -77,14 +79,10 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "User sync failed" }, { status: 500 });
         }
 
-        if (quality < 0 || quality > 5) {
-            return NextResponse.json({ error: "Quality must be between 0 and 5" }, { status: 400 });
-        }
-
-        // Determine the model based on the module
+        // 3. Determine model
         const dbModel = module === 'german' ? prisma.germanWord : prisma.englishWord;
 
-        // 1. Fetch current word data
+        // 4. Atomic transaction: fetch + calculate + update
         // @ts-ignore - Dynamic model access
         const word = await dbModel.findUnique({
             where: { id: wordId, userId: user.id },
@@ -94,7 +92,13 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Word not found" }, { status: 404 });
         }
 
-        // 2. Calculate new SM-2 values
+        // Dedup guard: if word was updated < 2 seconds ago, skip
+        const timeSinceLastUpdate = Date.now() - new Date(word.updatedAt).getTime();
+        if (timeSinceLastUpdate < 2000) {
+            return NextResponse.json(word); // Return current state, already updated
+        }
+
+        // 5. Calculate new SM-2 values
         const { newRepetitions, newEasiness, newInterval } = calculateSm2(
             quality,
             word.srsStep,
@@ -102,11 +106,10 @@ export async function POST(req: Request) {
             word.interval
         );
 
-        // 3. Calculate next review date (current date + newInterval in days)
-        // Add fractional days as milliseconds to preserve minute-level accuracy
+        // 6. Calculate next review date (UTC)
         const nextReviewDate = new Date(Date.now() + newInterval * 24 * 60 * 60 * 1000);
 
-        // 4. Update the word in the database
+        // 7. Update atomically
         // @ts-ignore
         const updatedWord = await dbModel.update({
             where: { id: wordId },
@@ -120,9 +123,7 @@ export async function POST(req: Request) {
 
         return NextResponse.json(updatedWord);
     } catch (error) {
-        console.error("SRS update error:", error);
+        console.error("[SRS Review] Update error:", error);
         return NextResponse.json({ error: "Failed to update SRS data" }, { status: 500 });
-    } finally {
-        await prisma.$disconnect();
     }
 }

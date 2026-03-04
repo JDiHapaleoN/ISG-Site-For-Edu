@@ -1,38 +1,46 @@
 import { NextResponse } from "next/server";
 import { generateContentWithFallback } from "@/lib/gemini";
+import { motivationLetterSchema } from "@/lib/validations";
+import { sanitizeForLlm } from "@/lib/sanitize";
 
 export async function POST(req: Request) {
     try {
         const body = await req.json();
+
+        // 1. Validate with Zod
+        const parsed = motivationLetterSchema.safeParse(body);
+        if (!parsed.success) {
+            return NextResponse.json(
+                { error: "Validation failed", details: parsed.error.flatten().fieldErrors },
+                { status: 400 }
+            );
+        }
+
         const {
-            language, // "de" | "en"
+            language,
             fullName,
             country,
             dateOfBirth,
             currentEducation,
             program,
             university,
-            degree,        // Bachelor / Master
-            semester,      // e.g. "WS 2026/27"
+            degree,
+            semester,
             gpa,
             strongSubjects,
             achievements,
             workExperience,
-            languages,     // language skills
+            languages,
             whyProgram,
             whyCountry,
             careerGoals,
             hobbies,
             softSkills,
             additionalInfo,
-        } = body;
+        } = parsed.data;
 
-        if (!fullName || !program || !university || !language) {
-            return NextResponse.json(
-                { error: "Необходимо заполнить обязательные поля: Имя, Программа, ВУЗ и Язык" },
-                { status: 400 }
-            );
-        }
+        // 2. Sanitize all user-provided text before LLM interpolation
+        const s = sanitizeForLlm;
 
         const isEnglish = language === "en";
         const outputLang = isEnglish ? "ENGLISH" : "GERMAN (Deutsch)";
@@ -60,25 +68,25 @@ STRICT RULES:
 7. Naturally incorporate all provided details — the more data the applicant gave, the richer the letter should be.
 
 APPLICANT PROFILE:
-- Full Name: ${fullName}
-- Date of Birth: ${dateOfBirth || "Not specified"}
-- Country / City: ${country || "Not specified"}
-- Current Education: ${currentEducation || "Not specified"}
-- Target Program: ${program}
-- Target University: ${university}
-- Degree Level: ${degree || "Bachelor"}
-- Desired Start Semester: ${semester || "Not specified"}
-- GPA / Academic Performance: ${gpa || "Not specified"}
-- Strong Subjects: ${strongSubjects || "Not specified"}
-- Achievements (olympiads, competitions, certificates): ${achievements || "None specified"}
-- Work Experience / Internships / Projects: ${workExperience || "None specified"}
-- Language Skills: ${languages || "Not specified"}
-- Why this program specifically: ${whyProgram || "Not specified"}
-- Why this university / country: ${whyCountry || "Not specified"}
-- Career Goals (5-10 years after graduation): ${careerGoals || "Not specified"}
-- Soft Skills & Personal Qualities: ${softSkills || "Not specified"}
-- Hobbies & Extracurricular Activities: ${hobbies || "Not specified"}
-- Additional Information: ${additionalInfo || "None"}
+- Full Name: ${s(fullName)}
+- Date of Birth: ${s(dateOfBirth) || "Not specified"}
+- Country / City: ${s(country) || "Not specified"}
+- Current Education: ${s(currentEducation) || "Not specified"}
+- Target Program: ${s(program)}
+- Target University: ${s(university)}
+- Degree Level: ${s(degree) || "Bachelor"}
+- Desired Start Semester: ${s(semester) || "Not specified"}
+- GPA / Academic Performance: ${s(gpa) || "Not specified"}
+- Strong Subjects: ${s(strongSubjects) || "Not specified"}
+- Achievements (olympiads, competitions, certificates): ${s(achievements) || "None specified"}
+- Work Experience / Internships / Projects: ${s(workExperience) || "None specified"}
+- Language Skills: ${s(languages) || "Not specified"}
+- Why this program specifically: ${s(whyProgram) || "Not specified"}
+- Why this university / country: ${s(whyCountry) || "Not specified"}
+- Career Goals (5-10 years after graduation): ${s(careerGoals) || "Not specified"}
+- Soft Skills & Personal Qualities: ${s(softSkills) || "Not specified"}
+- Hobbies & Extracurricular Activities: ${s(hobbies) || "Not specified"}
+- Additional Information: ${s(additionalInfo) || "None"}
 
 FINAL REMINDER: The ENTIRE letter must be written in ${outputLang}. Not a single sentence in any other language.
 
@@ -98,7 +106,7 @@ OUTPUT: Return ONLY the letter text. No JSON, no markdown formatting, no code bl
         return NextResponse.json({ letter: letterText.trim() });
 
     } catch (error: any) {
-        console.error("[Motivation Letter API Error]", error);
+        console.error("[Motivation Letter] API Error:", error);
         return NextResponse.json(
             { error: error.message || "Не удалось сгенерировать мотивационное письмо." },
             { status: 500 }

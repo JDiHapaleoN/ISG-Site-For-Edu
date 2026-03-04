@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { ensurePrismaUser } from "@/lib/auth-sync";
+import {
+    organizerTaskCreateSchema,
+    organizerTaskPatchSchema,
+    organizerTaskDeleteSchema,
+} from "@/lib/validations";
 
 // GET — fetch all tasks for current user
 export async function GET() {
@@ -10,8 +15,7 @@ export async function GET() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-        await ensurePrismaUser(user);
-        const dbUser = await prisma.user.findUnique({ where: { email: user.email! } });
+        const dbUser = await ensurePrismaUser(user);
         if (!dbUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
         const tasks = await prisma.organizerTask.findMany({
@@ -21,7 +25,7 @@ export async function GET() {
 
         return NextResponse.json(tasks);
     } catch (e: any) {
-        console.error("[API] GET /organizer/tasks error:", e);
+        console.error("[Organizer] GET /tasks error:", e);
         return NextResponse.json({ error: e.message || "Internal server error" }, { status: 500 });
     }
 }
@@ -33,24 +37,32 @@ export async function POST(req: Request) {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-        await ensurePrismaUser(user);
-        const dbUser = await prisma.user.findUnique({ where: { email: user.email! } });
+        const dbUser = await ensurePrismaUser(user);
         if (!dbUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
-        const { text, priority, deadline } = await req.json();
+        const body = await req.json();
+        const parsed = organizerTaskCreateSchema.safeParse(body);
+        if (!parsed.success) {
+            return NextResponse.json(
+                { error: "Validation failed", details: parsed.error.flatten().fieldErrors },
+                { status: 400 }
+            );
+        }
+
+        const { text, priority, deadline } = parsed.data;
 
         const task = await prisma.organizerTask.create({
             data: {
                 userId: dbUser.id,
-                text: text || "",
-                priority: priority || "medium",
+                text,
+                priority,
                 deadline: deadline ? new Date(deadline) : null,
             },
         });
 
         return NextResponse.json(task);
     } catch (e: any) {
-        console.error("[API] POST /organizer/tasks error:", e);
+        console.error("[Organizer] POST /tasks error:", e);
         return NextResponse.json({ error: e.message || "Internal server error" }, { status: 500 });
     }
 }
@@ -62,8 +74,16 @@ export async function PATCH(req: Request) {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-        const { id, completed, priority, deadline } = await req.json();
-        if (!id) return NextResponse.json({ error: "Missing task id" }, { status: 400 });
+        const body = await req.json();
+        const parsed = organizerTaskPatchSchema.safeParse(body);
+        if (!parsed.success) {
+            return NextResponse.json(
+                { error: "Validation failed", details: parsed.error.flatten().fieldErrors },
+                { status: 400 }
+            );
+        }
+
+        const { id, completed, priority, deadline } = parsed.data;
 
         const updateData: Record<string, unknown> = {};
         if (completed !== undefined) updateData.completed = completed;
@@ -77,7 +97,7 @@ export async function PATCH(req: Request) {
 
         return NextResponse.json(task);
     } catch (e: any) {
-        console.error("[API] PATCH /organizer/tasks error:", e);
+        console.error("[Organizer] PATCH /tasks error:", e);
         return NextResponse.json({ error: e.message || "Internal server error" }, { status: 500 });
     }
 }
@@ -89,14 +109,20 @@ export async function DELETE(req: Request) {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-        const { id } = await req.json();
-        if (!id) return NextResponse.json({ error: "Missing task id" }, { status: 400 });
+        const body = await req.json();
+        const parsed = organizerTaskDeleteSchema.safeParse(body);
+        if (!parsed.success) {
+            return NextResponse.json(
+                { error: "Validation failed", details: parsed.error.flatten().fieldErrors },
+                { status: 400 }
+            );
+        }
 
-        await prisma.organizerTask.delete({ where: { id } });
+        await prisma.organizerTask.delete({ where: { id: parsed.data.id } });
 
         return NextResponse.json({ success: true });
     } catch (e: any) {
-        console.error("[API] DELETE /organizer/tasks error:", e);
+        console.error("[Organizer] DELETE /tasks error:", e);
         return NextResponse.json({ error: e.message || "Internal server error" }, { status: 500 });
     }
 }

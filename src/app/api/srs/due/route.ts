@@ -2,14 +2,18 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { ensurePrismaUser } from "@/lib/auth-sync";
+import { srsDueModuleSchema } from "@/lib/validations";
 
 export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
-    const module = searchParams.get('module');
+    const moduleParam = searchParams.get('module');
 
-    if (!module || (module !== 'english' && module !== 'german')) {
-        return NextResponse.json({ error: "Invalid module specified" }, { status: 400 });
+    // Validate module param with Zod
+    const parsed = srsDueModuleSchema.safeParse(moduleParam);
+    if (!parsed.success) {
+        return NextResponse.json({ error: "Invalid module. Must be 'english' or 'german'." }, { status: 400 });
     }
+    const module = parsed.data;
 
     const supabase = createClient();
     const { data: { user: supabaseUser } } = await supabase.auth.getUser();
@@ -24,41 +28,22 @@ export async function GET(req: Request) {
     }
 
     try {
-        const today = new Date();
+        const now = new Date();
+        const dbModel = module === 'german' ? prisma.germanWord : prisma.englishWord;
 
-        if (module === 'german') {
-            const dueWords = await prisma.germanWord.findMany({
-                where: {
-                    userId: user.id,
-                    nextReview: {
-                        lte: today,
-                    },
-                },
-                orderBy: {
-                    nextReview: 'asc',
-                },
-                take: 50,
-            });
-            return NextResponse.json(dueWords);
-        } else {
-            const dueWords = await prisma.englishWord.findMany({
-                where: {
-                    userId: user.id,
-                    nextReview: {
-                        lte: today,
-                    },
-                },
-                orderBy: {
-                    nextReview: 'asc',
-                },
-                take: 50,
-            });
-            return NextResponse.json(dueWords);
-        }
+        // @ts-ignore - Dynamic model access
+        const dueWords = await dbModel.findMany({
+            where: {
+                userId: user.id,
+                nextReview: { lte: now },
+            },
+            orderBy: { nextReview: 'asc' },
+            take: 50,
+        });
+
+        return NextResponse.json(dueWords);
     } catch (error) {
-        console.error("SRS fetch error:", error);
+        console.error("[SRS Due] Fetch error:", error);
         return NextResponse.json({ error: "Failed to fetch due SRS cards" }, { status: 500 });
-    } finally {
-        await prisma.$disconnect();
     }
 }
