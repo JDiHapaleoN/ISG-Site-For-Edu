@@ -5,53 +5,7 @@ import { ensurePrismaUser } from "@/lib/auth-sync";
 import { srsReviewSchema } from "@/lib/validations";
 import { invalidateDeckMetadata } from "@/lib/redis";
 import { trackEvent, EVENTS } from "@/lib/analytics";
-
-// SuperMemo-2 Algorithm Helper (server-only)
-function calculateSm2(
-    quality: number,
-    repetitions: number,
-    easiness: number,
-    interval: number
-) {
-    let newRepetitions = repetitions;
-    let newInterval = interval; // in days (supports fractional)
-    let newEasiness = easiness;
-
-    if (quality === 1 || quality === 0) {
-        newRepetitions = 0;
-        newInterval = 1 / (24 * 60); // 1 minute in days
-    } else if (quality === 3) {
-        if (repetitions === 0) {
-            newInterval = 10 / (24 * 60); // 10 minutes in days
-        } else {
-            newInterval = Math.max(1, Math.round(interval * 1.2));
-        }
-        newRepetitions = Math.max(0, repetitions - 1);
-    } else if (quality === 4) {
-        if (repetitions === 0) {
-            newInterval = 1;
-        } else if (repetitions === 1) {
-            newInterval = 3;
-        } else {
-            newInterval = Math.round(interval * easiness);
-        }
-        newRepetitions += 1;
-    } else if (quality >= 5) {
-        if (repetitions === 0) {
-            newInterval = 4;
-        } else if (repetitions === 1) {
-            newInterval = 6;
-        } else {
-            newInterval = Math.round(interval * easiness * 1.3);
-        }
-        newRepetitions += 1;
-    }
-
-    newEasiness = easiness + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
-    if (newEasiness < 1.3) newEasiness = 1.3;
-
-    return { newRepetitions, newEasiness, newInterval };
-}
+import { calculateNextSequence } from "@/lib/srs";
 
 export async function POST(req: Request) {
     try {
@@ -101,7 +55,7 @@ export async function POST(req: Request) {
         }
 
         // 5. Calculate new SM-2 values
-        const { newRepetitions, newEasiness, newInterval } = calculateSm2(
+        const { newRepetitions, newEasiness, newInterval } = calculateNextSequence(
             quality,
             word.srsStep,
             word.easiness,

@@ -1,36 +1,18 @@
 "use client";
 
 import { useState, useEffect } from "react";
+
 import { Search, Loader2, Trash2, BookOpen, Clock, AlertCircle, PlayCircle } from "lucide-react";
 import { EnglishWord, GermanWord } from "@prisma/client";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+import { calculateNextSequence, formatIntervalUI } from "@/lib/srs";
 
 interface SrsDictionaryProps {
     module: "english" | "german";
 }
 
 type WordCard = EnglishWord | GermanWord;
-
-// Helper to calculate exact SM-2 interval based on the backend API logic
-function getIntervalStr(word: WordCard, quality: number) {
-    let { srsStep, interval, easiness } = word;
-    if (quality < 3) return "< 1м";
-
-    let newInterval = 1;
-    if (srsStep === 0) newInterval = 1;
-    else if (srsStep === 1) newInterval = 6;
-    else newInterval = Math.round(interval * easiness);
-
-    if (quality === 5 && srsStep > 1) {
-        newInterval = Math.round(interval * Math.max(1.3, easiness + 0.1) * 1.2);
-    }
-
-    if (newInterval === 1) return "1 дн";
-    if (newInterval < 30) return `${newInterval} дн`;
-    if (newInterval < 365) return `${Math.round(newInterval / 30)} мес`;
-    return `${Math.round(newInterval / 365)} г`;
-}
 
 export default function SrsDictionary({ module }: SrsDictionaryProps) {
     const [words, setWords] = useState<WordCard[]>([]);
@@ -279,15 +261,15 @@ export default function SrsDictionary({ module }: SrsDictionaryProps) {
                                             className="px-1 py-3 bg-rose-100 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400 rounded-xl flex flex-col items-center justify-center hover:bg-rose-200 dark:hover:bg-rose-900/50 transition-colors"
                                         >
                                             <span className="text-xs font-bold leading-none mb-1">Опять</span>
-                                            <span className="text-[10px] opacity-70 leading-none">{getIntervalStr(selectedWord, 1)}</span>
+                                            <span className="text-[10px] opacity-70 leading-none">{formatIntervalUI(calculateNextSequence(1, selectedWord.srsStep, selectedWord.easiness, selectedWord.interval).newInterval)}</span>
                                         </button>
                                         <button
                                             disabled={isSubmitting}
-                                            onClick={() => handleReschedule(2)}
+                                            onClick={() => handleReschedule(3)}
                                             className="px-1 py-3 bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 rounded-xl flex flex-col items-center justify-center hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors"
                                         >
                                             <span className="text-xs font-bold leading-none mb-1">Трудно</span>
-                                            <span className="text-[10px] opacity-70 leading-none">{getIntervalStr(selectedWord, 2)}</span>
+                                            <span className="text-[10px] opacity-70 leading-none">{formatIntervalUI(calculateNextSequence(3, selectedWord.srsStep, selectedWord.easiness, selectedWord.interval).newInterval)}</span>
                                         </button>
                                         <button
                                             disabled={isSubmitting}
@@ -295,7 +277,7 @@ export default function SrsDictionary({ module }: SrsDictionaryProps) {
                                             className="px-1 py-3 bg-emerald-100 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 rounded-xl flex flex-col items-center justify-center hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-colors"
                                         >
                                             <span className="text-xs font-bold leading-none mb-1">Хорошо</span>
-                                            <span className="text-[10px] opacity-70 leading-none">{getIntervalStr(selectedWord, 4)}</span>
+                                            <span className="text-[10px] opacity-70 leading-none">{formatIntervalUI(calculateNextSequence(4, selectedWord.srsStep, selectedWord.easiness, selectedWord.interval).newInterval)}</span>
                                         </button>
                                         <button
                                             disabled={isSubmitting}
@@ -303,7 +285,7 @@ export default function SrsDictionary({ module }: SrsDictionaryProps) {
                                             className="px-1 py-3 bg-cyan-100 dark:bg-cyan-950/30 text-cyan-700 dark:text-cyan-400 rounded-xl flex flex-col items-center justify-center hover:bg-cyan-200 dark:hover:bg-cyan-900/50 transition-colors"
                                         >
                                             <span className="text-xs font-bold leading-none mb-1">Легко</span>
-                                            <span className="text-[10px] opacity-70 leading-none">{getIntervalStr(selectedWord, 5)}</span>
+                                            <span className="text-[10px] opacity-70 leading-none">{formatIntervalUI(calculateNextSequence(5, selectedWord.srsStep, selectedWord.easiness, selectedWord.interval).newInterval)}</span>
                                         </button>
                                     </div>
                                     <div className="pt-2">
@@ -317,7 +299,7 @@ export default function SrsDictionary({ module }: SrsDictionaryProps) {
                                                 Начать активное повторение
                                             </div>
                                             <span className="text-[10px] font-medium opacity-80 leading-none">
-                                                Снимает таймер задолженности и переносит на завтра
+                                                Снимает задолженность и переносит вперед по алгоритму
                                             </span>
                                         </button>
                                     </div>

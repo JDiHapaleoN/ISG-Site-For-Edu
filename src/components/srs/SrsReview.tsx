@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { BrainCircuit, Check, X, Eye, Loader2, ArrowRight, Trash2 } from "lucide-react";
 import { EnglishWord, GermanWord } from "@prisma/client";
 import { toast } from "sonner";
+import { calculateNextSequence, formatIntervalUI } from "@/lib/srs";
 
 interface SrsReviewProps {
   module: "english" | "german";
@@ -278,7 +279,9 @@ export default function SrsReview({ module }: SrsReviewProps) {
                   title="Забыл полностью (1)"
                 >
                   <span className="font-bold text-sm sm:text-base md:text-lg">Снова</span>
-                  <span className="text-[9px] md:text-[10px] opacity-70">1 мин</span>
+                  <span className="text-[9px] md:text-[10px] opacity-70">
+                    {formatIntervalUI(calculateNextSequence(1, card.srsStep, card.easiness, card.interval).newInterval)}
+                  </span>
                 </button>
                 <button
                   onClick={() => handleReview(3)}
@@ -287,7 +290,9 @@ export default function SrsReview({ module }: SrsReviewProps) {
                   title="Трудно вспомнить (3)"
                 >
                   <span className="font-bold text-sm sm:text-base md:text-lg">Сложно</span>
-                  <span className="text-[9px] md:text-[10px] opacity-70">10 мин</span>
+                  <span className="text-[9px] md:text-[10px] opacity-70">
+                    {formatIntervalUI(calculateNextSequence(3, card.srsStep, card.easiness, card.interval).newInterval)}
+                  </span>
                 </button>
                 <button
                   onClick={() => handleReview(4)}
@@ -296,7 +301,9 @@ export default function SrsReview({ module }: SrsReviewProps) {
                   title="Вспомнил с запинкой (4)"
                 >
                   <span className="font-bold text-sm sm:text-base md:text-lg">Хорошо</span>
-                  <span className="text-[9px] md:text-[10px] opacity-70">1 день</span>
+                  <span className="text-[9px] md:text-[10px] opacity-70">
+                    {formatIntervalUI(calculateNextSequence(4, card.srsStep, card.easiness, card.interval).newInterval)}
+                  </span>
                 </button>
                 <button
                   onClick={() => handleReview(5)}
@@ -305,7 +312,9 @@ export default function SrsReview({ module }: SrsReviewProps) {
                   title="Идеально (5)"
                 >
                   <span className="font-bold text-sm sm:text-base md:text-lg">Легко</span>
-                  <span className="text-[9px] md:text-[10px] opacity-70">4 дня</span>
+                  <span className="text-[9px] md:text-[10px] opacity-70">
+                    {formatIntervalUI(calculateNextSequence(5, card.srsStep, card.easiness, card.interval).newInterval)}
+                  </span>
                 </button>
               </div>
             </div>

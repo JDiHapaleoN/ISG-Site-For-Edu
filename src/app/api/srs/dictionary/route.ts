@@ -13,29 +13,32 @@ export async function GET(req: Request) {
 
         const url = new URL(req.url);
         const module = url.searchParams.get("module") || "english";
+        const q = url.searchParams.get("q") || "";
 
         let words: any[] = [];
 
+        const wordWhere: any = {
+            deck: { userId: user.id }
+        };
+
+        if (q.trim()) {
+            wordWhere.OR = [
+                { term: { contains: q.trim(), mode: 'insensitive' } },
+                { translation: { contains: q.trim(), mode: 'insensitive' } },
+                { context: { contains: q.trim(), mode: 'insensitive' } }
+            ];
+        }
+
         if (module === "english") {
-            const decks = await prisma.englishDeck.findMany({
-                where: { userId: user.id },
-                include: {
-                    words: {
-                        orderBy: { createdAt: "desc" }
-                    }
-                }
+            words = await prisma.englishWord.findMany({
+                where: wordWhere,
+                orderBy: { createdAt: "desc" }
             });
-            words = decks.flatMap(deck => deck.words);
         } else if (module === "german") {
-            const decks = await prisma.germanDeck.findMany({
-                where: { userId: user.id },
-                include: {
-                    words: {
-                        orderBy: { createdAt: "desc" }
-                    }
-                }
+            words = await prisma.germanWord.findMany({
+                where: wordWhere,
+                orderBy: { createdAt: "desc" }
             });
-            words = decks.flatMap(deck => deck.words);
         } else {
             return NextResponse.json({ error: "Invalid module" }, { status: 400 });
         }
