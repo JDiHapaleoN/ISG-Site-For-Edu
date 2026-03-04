@@ -1,4 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { getCachedGeminiResponse, setCachedGeminiResponse } from "./redis";
+import * as crypto from "crypto";
 
 if (!process.env.OPENAI_API_KEY) {
     console.warn("[Gemini] Missing OPENAI_API_KEY. AI features will not work.");
@@ -30,6 +32,7 @@ function sleep(ms: number): Promise<void> {
 
 /**
  * Generate content with:
+ * - Redis caching (24h)
  * - Model fallback chain
  * - 30s AbortController timeout per attempt
  * - Exponential backoff on 429 (rate limit)
@@ -40,6 +43,23 @@ export async function generateContentWithFallback(
     config: any = {},
     timeoutMs = 30000
 ) {
+    // 1. Generate cache key from prompt and config
+    const cacheKey = crypto
+        .createHash("sha256")
+        .update(prompt + JSON.stringify(config))
+        .digest("hex");
+
+    // 2. Check cache
+    const cached = await getCachedGeminiResponse(cacheKey);
+    if (cached) {
+        return {
+            response: {
+                text: () => cached,
+            },
+            isCached: true,
+        };
+    }
+
     const modelsToTry = [
         "gemini-2.5-flash",
         "gemini-2.0-flash",
@@ -77,6 +97,9 @@ export async function generateContentWithFallback(
                         502
                     );
                 }
+
+                // 3. Store in cache on success
+                await setCachedGeminiResponse(cacheKey, text, 86400); // 24h
 
                 console.info(`[Gemini] Success with ${modelName} on attempt ${attempt + 1}`);
                 return result;

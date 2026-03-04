@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { ensurePrismaUser } from "@/lib/auth-sync";
 import { srsDueModuleSchema } from "@/lib/validations";
+import { getCachedDeckMetadata, setCachedDeckMetadata } from "@/lib/redis";
 
 export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
@@ -28,6 +29,13 @@ export async function GET(req: Request) {
     }
 
     try {
+        // 1. Check cache first
+        const cached = await getCachedDeckMetadata(user.id, module);
+        if (cached) {
+            console.info(`[SRS Due] Cache hit for ${user.id}:${module}`);
+            return NextResponse.json(cached);
+        }
+
         const now = new Date();
         const dbModel = module === 'german' ? prisma.germanWord : prisma.englishWord;
 
@@ -40,6 +48,9 @@ export async function GET(req: Request) {
             orderBy: { nextReview: 'asc' },
             take: 50,
         });
+
+        // 2. Store in cache
+        await setCachedDeckMetadata(user.id, module, dueWords);
 
         return NextResponse.json(dueWords);
     } catch (error) {

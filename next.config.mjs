@@ -1,3 +1,4 @@
+import { withSentryConfig } from "@sentry/nextjs";
 import withPWAInit from "@ducanh2912/next-pwa";
 
 const withPWA = withPWAInit({
@@ -39,4 +40,18 @@ const nextConfig = {
         ];
     }
 };
-export default withPWA(nextConfig);
+
+const sentryOptions = {
+    silent: true,
+    org: "isg-2f",
+    project: "javascript-nextjs",
+    widenClientFileUpload: true,
+    transpileClientSDK: true,
+    tunnelRoute: "/monitoring",
+    hideSourceMaps: true,
+    disableLogger: true,
+    automaticVercelMonitors: true,
+};
+
+export default withSentryConfig(withPWA(nextConfig), sentryOptions);
+

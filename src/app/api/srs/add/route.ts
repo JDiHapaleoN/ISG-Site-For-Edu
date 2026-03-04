@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ensurePrismaUser } from "@/lib/auth-sync";
 import { srsAddSchema, englishWordSchema, germanWordSchema } from "@/lib/validations";
 import { checkRateLimit, WORD_CREATION_RATE_LIMIT, getClientIp } from "@/lib/rate-limit";
+import { invalidateDeckMetadata } from "@/lib/redis";
 
 export async function POST(req: Request) {
     try {
@@ -76,6 +77,10 @@ export async function POST(req: Request) {
                     partOfSpeech: wordData.partOfSpeech,
                 },
             });
+
+            // Invalidate cache
+            await invalidateDeckMetadata(user.id, "english");
+
             return NextResponse.json({ success: true, word: newWord });
 
         } else {
@@ -100,6 +105,10 @@ export async function POST(req: Request) {
                     partOfSpeech: wordData.partOfSpeech,
                 },
             });
+
+            // Invalidate cache
+            await invalidateDeckMetadata(user.id, "german");
+
             return NextResponse.json({ success: true, word: newWord });
         }
     } catch (error: any) {

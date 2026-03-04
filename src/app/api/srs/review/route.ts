@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { ensurePrismaUser } from "@/lib/auth-sync";
 import { srsReviewSchema } from "@/lib/validations";
+import { invalidateDeckMetadata } from "@/lib/redis";
 
 // SuperMemo-2 Algorithm Helper (server-only)
 function calculateSm2(
@@ -120,6 +121,9 @@ export async function POST(req: Request) {
                 nextReview: nextReviewDate,
             },
         });
+
+        // Invalidate cache
+        await invalidateDeckMetadata(user.id, module);
 
         return NextResponse.json(updatedWord);
     } catch (error) {
