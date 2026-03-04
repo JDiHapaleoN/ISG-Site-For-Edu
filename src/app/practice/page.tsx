@@ -7,7 +7,7 @@ const MotivationLetterGenerator = dynamic(() => import("@/components/practice/Mo
 
 export const metadata = {
     title: "AI Practice Zone | Antigravity LMS",
-    description: "IELTS & TestDaF writing simulators, and Feynman Technique practice.",
+    description: "IELTS & Goethe writing simulators, and Feynman Technique practice.",
 };
 
 export default function PracticePage() {

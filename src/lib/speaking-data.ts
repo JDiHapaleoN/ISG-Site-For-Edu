@@ -85,7 +85,7 @@ export const SPEAKING_TEMPLATES_DE: RedemittelCategory[] = [
     {
         id: "intro",
         name: "Einleitung & Strukturierung",
-        description: "Phrasen für den Einstieg in die Antwort (Aufgabe 3/4).",
+        description: "Phrasen für den Einstieg in die Antwort (Teil 2: Diskussion).",
         phrases: [
             { phrase: "Zunächst einmal möchte ich feststellen...", translation: "Прежде всего, я хотел бы констатировать..." },
             { phrase: "Ein wichtiger Aspekt in diesem Zusammenhang ist...", translation: "Важным аспектом в этой связи является..." },
@@ -109,7 +109,7 @@ export const SPEAKING_TEMPLATES_DE: RedemittelCategory[] = [
     {
         id: "charts",
         name: "Grafikbeschreibung",
-        description: "Besonders nützlich für die Aufgaben 3 und 5 des TestDaF.",
+        description: "Nützlich für die Beschreibung von Diagrammen oder Bildern im Goethe-Zertifikat.",
         phrases: [
             { phrase: "Die Grafik liefert Informationen über...", translation: "График предоставляет информацию о..." },
             { phrase: "An erster Stelle steht...", translation: "На первом месте стоит..." },
@@ -121,7 +121,7 @@ export const SPEAKING_TEMPLATES_DE: RedemittelCategory[] = [
     {
         id: "arguments",
         name: "Argumentation",
-        description: "Vor- und Nachteile abwägen (Aufgabe 4 und 6).",
+        description: "Vor- und Nachteile abwägen (Teil 2: Diskussion / Teil 1: Vortrag).",
         phrases: [
             { phrase: "Einerseits..., andererseits...", translation: "С одной стороны..., с другой стороны..." },
             { phrase: "Ein Vorteil ist, dass...", translation: "Одним из преимуществ является то, что..." },
@@ -133,7 +133,7 @@ export const SPEAKING_TEMPLATES_DE: RedemittelCategory[] = [
     {
         id: "examples",
         name: "Beispiele geben & Begründen",
-        description: "Argumente stützen (Sehr wichtig für TDN 4 und 5).",
+        description: "Argumente stützen (Sehr wichtig für das Goethe-Zertifikat B2/C1).",
         phrases: [
             { phrase: "Ein gutes Beispiel dafür ist...", translation: "Хорошим примером этого является..." },
             { phrase: "Dies lässt sich an folgendem Beispiel veranschaulichen:", translation: "Это можно проиллюстрировать на следующем примере:" },
@@ -161,11 +161,11 @@ export const SPEAKING_TOPICS_EN: SpeakingTopic[] = [
 ];
 
 export const SPEAKING_TOPICS_DE: SpeakingTopic[] = [
-    { id: "studi", title: "Studiengebühren", question: "Sollten Studiengebühren an deutschen Universitäten eingeführt werden?", context: "Aufgabe 4: Diskussion" },
-    { id: "arbeit", title: "Homeoffice", question: "Welche Vor- und Nachteile hat die zunehmende Verbreitung von Homeoffice?", context: "Aufgabe 4: Argumentation" },
-    { id: "umwelt", title: "Klimawandel", question: "Welche Rolle spielt der Einzelne beim Klimaschutz und was kann die Regierung tun?", context: "Aufgabe 6: Hypothesen" },
-    { id: "verkehr", title: "Verkehrsmittel", question: "Wie können wir Menschen dazu motivieren, häufiger öffentliche Verkehrsmittel zu nutzen?", context: "Aufgabe 6: Problemlösung" },
-    { id: "digital", title: "Digitalisierung", question: "Sollten gedruckte Schulbücher komplett durch Tablets ersetzt werden?", context: "Aufgabe 4: Diskussion" },
-    { id: "gesundheit", title: "Gesundheit", question: "Beschreiben Sie eine Grafik über den Fast-Food-Konsum von Jugendlichen.", context: "Aufgabe 3: Grafik" },
-    { id: "wohnen", title: "Wohnungsnot", question: "Welche Maßnahmen könnten gegen die Wohnungsnot in Großstädten ergriffen werden?", context: "Aufgabe 6: Lösungsvorschläge" }
+    { id: "studi", title: "Studiengebühren", question: "Sollten Studiengebühren an deutschen Universitäten eingeführt werden?", context: "Teil 2: Diskussion" },
+    { id: "arbeit", title: "Homeoffice", question: "Welche Vor- und Nachteile hat die zunehmende Verbreitung von Homeoffice?", context: "Teil 2: Diskussion" },
+    { id: "umwelt", title: "Klimawandel", question: "Welche Rolle spielt der Einzelne beim Klimaschutz und was kann die Regierung tun?", context: "Teil 1: Vortrag" },
+    { id: "verkehr", title: "Verkehrsmittel", question: "Wie können wir Menschen dazu motivieren, häufiger öffentliche Verkehrsmittel zu nutzen?", context: "Teil 2: Diskussion" },
+    { id: "digital", title: "Digitalisierung", question: "Sollten gedruckte Schulbücher komplett durch Tablets ersetzt werden?", context: "Teil 2: Diskussion" },
+    { id: "gesundheit", title: "Gesundheit", question: "Beschreiben Sie eine Grafik oder ein Bild über den Fast-Food-Konsum von Jugendlichen.", context: "Teil 1: Präsentation" },
+    { id: "wohnen", title: "Wohnungsnot", question: "Welche Maßnahmen könnten gegen die Wohnungsnot in Großstädten ergriffen werden?", context: "Teil 2: Problemlösung" }
 ];

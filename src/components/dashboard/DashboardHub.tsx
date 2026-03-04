@@ -88,10 +88,10 @@ export default function DashboardHub() {
                                 </div>
                             </div>
 
-                            {/* TestDaF */}
+                            {/* Goethe-Zertifikat */}
                             <div className="flex flex-col gap-2">
                                 <div className="flex justify-between items-center text-sm font-bold">
-                                    <span className="text-pink-600 dark:text-pink-400">TestDaF (TDN 4)</span>
+                                    <span className="text-pink-600 dark:text-pink-400">Goethe-Zertifikat (B2/C1)</span>
                                     <span className="text-zinc-500">Готовность {testdaf}%</span>
                                 </div>
                                 <div className="h-4 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">

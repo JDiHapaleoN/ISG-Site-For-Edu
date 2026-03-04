@@ -1,7 +1,7 @@
 {
     "name": "ISG - Educational Platform",
     "short_name": "ISG Edu",
-    "description": "Premium educational platform for IELTS, TestDaF and Math preparation.",
+    "description": "Premium educational platform for IELTS, Goethe and Math preparation.",
     "start_url": "/",
     "display": "standalone",
     "orientation": "portrait",

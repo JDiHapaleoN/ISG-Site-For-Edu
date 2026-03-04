@@ -10,7 +10,7 @@ import { MessageSquare, BadgeCheck } from "lucide-react";
 
 export const metadata = {
     title: "Speaking Coach | Antigravity LMS",
-    description: "IELTS & TestDaF speaking simulator with exam-ready templates.",
+    description: "IELTS & Goethe speaking simulator with exam-ready templates.",
 };
 
 export default function SpeakingPage({
@@ -37,7 +37,7 @@ export default function SpeakingPage({
                         <p className="text-zinc-500 max-w-2xl text-lg">
                             {module === "english"
                                 ? "Practice your IELTS speaking with high-scoring structures and real-time AI feedback."
-                                : "Trainiere deine TestDaF-Sprechfertigkeiten mit Redemitteln und KI-Feedback."}
+                                : "Trainiere deine Goethe-Sprechfertigkeiten mit Redemitteln und KI-Feedback."}
                         </p>
                     </div>
 
@@ -45,8 +45,8 @@ export default function SpeakingPage({
                         <a
                             href="?lang=english"
                             className={`flex-1 px-6 py-2.5 rounded-xl text-sm font-bold transition-all text-center ${module === "english"
-                                    ? "bg-white dark:bg-zinc-700 text-indigo-500 shadow-sm scale-[1.02]"
-                                    : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300"
+                                ? "bg-white dark:bg-zinc-700 text-indigo-500 shadow-sm scale-[1.02]"
+                                : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300"
                                 }`}
                         >
                             IELTS (English)
@@ -54,11 +54,11 @@ export default function SpeakingPage({
                         <a
                             href="?lang=german"
                             className={`flex-1 px-6 py-2.5 rounded-xl text-sm font-bold transition-all text-center ${module === "german"
-                                    ? "bg-white dark:bg-zinc-700 text-indigo-500 shadow-sm scale-[1.02]"
-                                    : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300"
+                                ? "bg-white dark:bg-zinc-700 text-indigo-500 shadow-sm scale-[1.02]"
+                                : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300"
                                 }`}
                         >
-                            TestDaF (Deutsch)
+                            Goethe (Deutsch)
                         </a>
                     </div>
                 </div>

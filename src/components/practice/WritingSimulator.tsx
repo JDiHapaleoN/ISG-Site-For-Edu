@@ -415,7 +415,7 @@ export default function WritingSimulator() {
                             onClick={() => handleModuleChange("german")}
                             className={`flex-1 md:flex-none px-6 py-2 rounded-lg text-sm font-semibold transition-colors ${module === "german" ? "bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-zinc-100" : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"}`}
                         >
-                            TestDaF
+                            Goethe-Zertifikat
                         </button>
                     </div>
 
@@ -612,6 +612,6 @@ export default function WritingSimulator() {
                     )}
                 </div>
             </div>
-        </div>
+        </div >
     );
 }

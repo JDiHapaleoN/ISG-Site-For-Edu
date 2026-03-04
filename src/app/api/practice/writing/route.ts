@@ -37,7 +37,7 @@ export async function POST(req: Request) {
     }
 
     const systemPrompt = `
-You are an expert examiner for ${language === "english" ? "IELTS Academic" : "TestDaF"} writing.
+You are an expert examiner for ${language === "english" ? "IELTS Academic" : "Goethe-Zertifikat"} writing.
 The student is attempting "${type}".
 The prompt given to the student was: "${prompt}"
 

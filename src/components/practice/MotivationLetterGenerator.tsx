@@ -421,7 +421,7 @@ export default function MotivationLetterGenerator() {
                                 <label className={labelClass}>Олимпиады, конкурсы, сертификаты</label>
                                 <textarea
                                     className={inputClass + " min-h-[90px] resize-none"}
-                                    placeholder="Призёр республиканской олимпиады по математике, сертификат TestDaF C1, участие в Hackathon..."
+                                    placeholder="Призёр республиканской олимпиады по математике, сертификат Goethe-Zertifikat C1, участие в Hackathon..."
                                     value={form.achievements}
                                     onChange={e => updateField("achievements", e.target.value)}
                                 />
