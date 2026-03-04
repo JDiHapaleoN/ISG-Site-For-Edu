@@ -1,11 +1,22 @@
 import { NextResponse } from "next/server";
-import { generateContentWithFallback } from "@/lib/gemini";
+import { generateContentWithFallback, GeminiError } from "@/lib/gemini";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { ensurePrismaUser } from "@/lib/auth-sync";
+import { checkRateLimit, AI_RATE_LIMIT, getClientIp } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
   try {
+    // Rate limit
+    const ip = getClientIp(req);
+    const limit = checkRateLimit(`ai:${ip}`, AI_RATE_LIMIT);
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: `Слишком много запросов. Подождите ${Math.ceil(limit.resetMs / 1000)} сек.` },
+        { status: 429, headers: { "Retry-After": String(Math.ceil(limit.resetMs / 1000)) } }
+      );
+    }
+
     const { word, context, module } = await req.json();
 
     if (!word || !module) {
@@ -78,24 +89,11 @@ Return only JSON.
 
     return NextResponse.json({ ...translationData, isAdded });
   } catch (error: any) {
-    console.error("Translation API Error:", error);
-
-    // Friendly error for quota/rate limits
-    if (error.message?.includes("429") || error.message?.includes("quota")) {
-      return NextResponse.json(
-        { error: "Превышен лимит запросов. Пожалуйста, подождите 1-2 минуты и попробуйте снова." },
-        { status: 429 }
-      );
-    }
-
-    // Friendly error for server overload (503)
-    if (error.message?.includes("503") || error.message?.includes("overloaded") || error.message?.includes("demand")) {
-      return NextResponse.json(
-        { error: "Сервера Google сейчас перегружены. Пожалуйста, подождите 30 секунд и попробуйте еще раз." },
-        { status: 503 }
-      );
-    }
-
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("[Translate] API Error:", error);
+    const userMessage = error instanceof GeminiError
+      ? error.userMessage
+      : (error.message || "Ошибка перевода.");
+    const statusCode = error instanceof GeminiError ? error.statusCode : 500;
+    return NextResponse.json({ error: userMessage }, { status: statusCode });
   }
 }

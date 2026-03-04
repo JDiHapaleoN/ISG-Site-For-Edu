@@ -3,9 +3,20 @@ import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { ensurePrismaUser } from "@/lib/auth-sync";
 import { srsAddSchema, englishWordSchema, germanWordSchema } from "@/lib/validations";
+import { checkRateLimit, WORD_CREATION_RATE_LIMIT, getClientIp } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
     try {
+        // Rate limit
+        const ip = getClientIp(req);
+        const limit = checkRateLimit(`word:${ip}`, WORD_CREATION_RATE_LIMIT);
+        if (!limit.allowed) {
+            return NextResponse.json(
+                { error: `Слишком много запросов. Подождите ${Math.ceil(limit.resetMs / 1000)} сек.` },
+                { status: 429, headers: { "Retry-After": String(Math.ceil(limit.resetMs / 1000)) } }
+            );
+        }
+
         const body = await req.json();
 
         // 1. Base validation

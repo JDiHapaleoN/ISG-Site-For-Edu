@@ -1,12 +1,22 @@
 import { NextResponse } from "next/server";
-import { generateContentWithFallback } from "@/lib/gemini";
+import { generateContentWithFallback, GeminiError } from "@/lib/gemini";
 import { prisma } from "@/lib/prisma";
-
 import { createClient } from "@/lib/supabase/server";
 import { ensurePrismaUser } from "@/lib/auth-sync";
+import { checkRateLimit, AI_RATE_LIMIT, getClientIp } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
   try {
+    // Rate limit
+    const ip = getClientIp(req);
+    const limit = checkRateLimit(`ai:${ip}`, AI_RATE_LIMIT);
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: `Слишком много запросов. Подождите ${Math.ceil(limit.resetMs / 1000)} сек.` },
+        { status: 429, headers: { "Retry-After": String(Math.ceil(limit.resetMs / 1000)) } }
+      );
+    }
+
     const { prompt, language, text, type } = await req.json();
 
     const supabase = createClient();
@@ -100,22 +110,11 @@ Output ONLY a JSON object with this exact structure:
       score: parsedResponse.score,
     });
   } catch (error: any) {
-    console.error("Gemini writing error:", error);
-
-    if (error.message?.includes("429") || error.message?.includes("quota")) {
-      return NextResponse.json(
-        { error: "Превышен лимит запросов. Пожалуйста, подождите 1-2 минуты." },
-        { status: 429 }
-      );
-    }
-
-    if (error.message?.includes("503") || error.message?.includes("overloaded")) {
-      return NextResponse.json(
-        { error: "Сервера перегружены. Пожалуйста, попробуйте снова через 30 секунд." },
-        { status: 503 }
-      );
-    }
-
-    return NextResponse.json({ error: `Failed to process essay: ${error.message}` }, { status: 500 });
+    console.error("[Writing] API Error:", error);
+    const userMessage = error instanceof GeminiError
+      ? error.userMessage
+      : (error.message || "Ошибка обработки эссе.");
+    const statusCode = error instanceof GeminiError ? error.statusCode : 500;
+    return NextResponse.json({ error: userMessage }, { status: statusCode });
   }
 }

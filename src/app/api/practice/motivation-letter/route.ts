@@ -1,10 +1,21 @@
 import { NextResponse } from "next/server";
-import { generateContentWithFallback } from "@/lib/gemini";
+import { generateContentWithFallback, GeminiError } from "@/lib/gemini";
 import { motivationLetterSchema } from "@/lib/validations";
 import { sanitizeForLlm } from "@/lib/sanitize";
+import { checkRateLimit, AI_RATE_LIMIT, getClientIp } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
     try {
+        // Rate limit check
+        const ip = getClientIp(req);
+        const limit = checkRateLimit(`ai:${ip}`, AI_RATE_LIMIT);
+        if (!limit.allowed) {
+            return NextResponse.json(
+                { error: `Слишком много запросов. Подождите ${Math.ceil(limit.resetMs / 1000)} сек.` },
+                { status: 429, headers: { "Retry-After": String(Math.ceil(limit.resetMs / 1000)) } }
+            );
+        }
+
         const body = await req.json();
 
         // 1. Validate with Zod
@@ -107,9 +118,10 @@ OUTPUT: Return ONLY the letter text. No JSON, no markdown formatting, no code bl
 
     } catch (error: any) {
         console.error("[Motivation Letter] API Error:", error);
-        return NextResponse.json(
-            { error: error.message || "Не удалось сгенерировать мотивационное письмо." },
-            { status: 500 }
-        );
+        const userMessage = error instanceof GeminiError
+            ? error.userMessage
+            : (error.message || "Не удалось сгенерировать мотивационное письмо.");
+        const statusCode = error instanceof GeminiError ? error.statusCode : 500;
+        return NextResponse.json({ error: userMessage }, { status: statusCode });
     }
 }

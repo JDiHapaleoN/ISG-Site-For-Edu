@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 if (!process.env.OPENAI_API_KEY) {
-    console.warn("Missing OPENAI_API_KEY environment variable. Gemini AI features will not work.");
+    console.warn("[Gemini] Missing OPENAI_API_KEY. AI features will not work.");
 }
 
 const genAI = new GoogleGenerativeAI(process.env.OPENAI_API_KEY || "");
@@ -10,35 +10,124 @@ export const geminiModel = genAI.getGenerativeModel({
     model: "gemini-1.5-flash",
 });
 
-export async function generateContentWithFallback(prompt: string, config: any = {}) {
+/** Custom error class with user-facing message */
+export class GeminiError extends Error {
+    public readonly userMessage: string;
+    public readonly statusCode: number;
+
+    constructor(message: string, userMessage: string, statusCode = 500) {
+        super(message);
+        this.name = "GeminiError";
+        this.userMessage = userMessage;
+        this.statusCode = statusCode;
+    }
+}
+
+/** Sleep helper for backoff */
+function sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Generate content with:
+ * - Model fallback chain
+ * - 30s AbortController timeout per attempt
+ * - Exponential backoff on 429 (rate limit)
+ * - Response validation
+ */
+export async function generateContentWithFallback(
+    prompt: string,
+    config: any = {},
+    timeoutMs = 30000
+) {
     const modelsToTry = [
         "gemini-2.5-flash",
         "gemini-2.0-flash",
         "gemini-1.5-flash",
         "gemini-1.5-pro",
-        "gemini-pro"
+        "gemini-pro",
     ];
 
     let lastError: any = null;
 
     for (const modelName of modelsToTry) {
-        try {
-            const model = genAI.getGenerativeModel({ model: modelName, generationConfig: config });
-            const result = await model.generateContent(prompt);
-            return result;
-        } catch (error: any) {
-            lastError = error;
-            console.warn(`[Gemini Fallback] Model ${modelName} failed: ${error.message}`);
+        // Retry loop per model (for 429 backoff)
+        for (let attempt = 0; attempt < 3; attempt++) {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
-            // If it's a 404 or unsupported method, try the next model
-            if (error.message?.includes("404") || error.message?.includes("is not supported") || error.message?.includes("not found")) {
-                continue;
+            try {
+                const model = genAI.getGenerativeModel({
+                    model: modelName,
+                    generationConfig: config,
+                });
+
+                const result = await model.generateContent({
+                    contents: [{ role: "user", parts: [{ text: prompt }] }],
+                });
+
+                clearTimeout(timeout);
+
+                // Validate response
+                const text = result.response?.text?.();
+                if (!text || text.trim().length < 10) {
+                    throw new GeminiError(
+                        `[Gemini] Empty response from ${modelName}`,
+                        "ИИ вернул пустой ответ. Попробуйте ещё раз.",
+                        502
+                    );
+                }
+
+                console.info(`[Gemini] Success with ${modelName} on attempt ${attempt + 1}`);
+                return result;
+            } catch (error: any) {
+                clearTimeout(timeout);
+                lastError = error;
+
+                // Abort → timeout
+                if (error.name === "AbortError" || controller.signal.aborted) {
+                    console.warn(`[Gemini] Timeout (${timeoutMs}ms) on ${modelName}, attempt ${attempt + 1}`);
+                    continue; // Retry same model
+                }
+
+                // 429 rate limit → exponential backoff
+                if (error.message?.includes("429") || error.message?.includes("quota") || error.message?.includes("rate")) {
+                    const backoffMs = Math.min(1000 * Math.pow(2, attempt), 8000);
+                    console.warn(`[Gemini] Rate limited on ${modelName}, backing off ${backoffMs}ms (attempt ${attempt + 1})`);
+                    await sleep(backoffMs);
+                    continue; // Retry same model
+                }
+
+                // 404 / unsupported model → try next model
+                if (
+                    error.message?.includes("404") ||
+                    error.message?.includes("is not supported") ||
+                    error.message?.includes("not found")
+                ) {
+                    console.warn(`[Gemini] Model ${modelName} not available, trying next`);
+                    break; // Break retry loop, go to next model
+                }
+
+                // 403 invalid key → fatal, don't retry
+                if (error.message?.includes("403") || error.message?.includes("API key")) {
+                    throw new GeminiError(
+                        `[Gemini] Invalid API key: ${error.message}`,
+                        "Ошибка ключа API. Свяжитесь с администратором.",
+                        403
+                    );
+                }
+
+                // Unknown error → try next model
+                console.error(`[Gemini] Unexpected error on ${modelName}: ${error.message}`);
+                break;
             }
-
-            // If it's a real error (403 invalid key, 429 quota, etc.), throw immediately
-            throw error;
         }
     }
 
-    throw lastError;
+    // All models exhausted
+    throw new GeminiError(
+        `[Gemini] All models failed. Last error: ${lastError?.message}`,
+        "ИИ временно недоступен. Попробуйте через несколько минут.",
+        503
+    );
 }
