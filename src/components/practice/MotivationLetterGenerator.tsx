@@ -82,8 +82,13 @@ export default function MotivationLetterGenerator() {
     const [error, setError] = useState<string | null>(null);
     const [copied, setCopied] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
+    const isFirstRender = useRef(true);
 
     useEffect(() => {
+        if (isFirstRender.current) {
+            isFirstRender.current = false;
+            return;
+        }
         containerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, [step]);
 
@@ -182,7 +187,7 @@ export default function MotivationLetterGenerator() {
         }
     };
 
-    const inputClass = "w-full p-3 md:p-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-sm md:text-base text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all";
+    const inputClass = "w-full min-w-0 p-3 md:p-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-sm md:text-base text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all";
     const labelClass = "block text-xs font-black uppercase tracking-widest text-zinc-400 mb-2";
 
     return (
