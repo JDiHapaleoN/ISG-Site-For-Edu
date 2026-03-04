@@ -3,6 +3,8 @@ import { generateContentWithFallback, GeminiError } from "@/lib/gemini";
 import { motivationLetterSchema } from "@/lib/validations";
 import { sanitizeForLlm } from "@/lib/sanitize";
 import { checkRateLimit, AI_RATE_LIMIT, getClientIp } from "@/lib/rate-limit";
+import { trackEvent, EVENTS } from "@/lib/analytics";
+import { createClient } from "@/lib/supabase/server";
 
 export async function POST(req: Request) {
     try {
@@ -112,6 +114,16 @@ OUTPUT: Return ONLY the letter text. No JSON, no markdown formatting, no code bl
                 { error: "ИИ не смог сгенерировать письмо. Попробуйте ещё раз." },
                 { status: 500 }
             );
+        }
+
+        // Try to get user, but don't fail if anonymous (wizard might be public or we just want tracking if logged in)
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (user) {
+            trackEvent(EVENTS.WIZARD_COMPLETED, user.id, { program, university });
+        } else {
+            trackEvent(EVENTS.WIZARD_COMPLETED, null, { program, university });
         }
 
         return NextResponse.json({ letter: letterText.trim() });

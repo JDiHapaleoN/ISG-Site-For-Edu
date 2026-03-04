@@ -1,7 +1,9 @@
-import WritingSimulator from "@/components/practice/WritingSimulator";
-import FeynmanSimulator from "@/components/practice/FeynmanSimulator";
-import MotivationLetterGenerator from "@/components/practice/MotivationLetterGenerator";
+import dynamic from 'next/dynamic';
 import { PenTool } from "lucide-react";
+
+const WritingSimulator = dynamic(() => import("@/components/practice/WritingSimulator"));
+const FeynmanSimulator = dynamic(() => import("@/components/practice/FeynmanSimulator"));
+const MotivationLetterGenerator = dynamic(() => import("@/components/practice/MotivationLetterGenerator"));
 
 export const metadata = {
     title: "AI Practice Zone | Antigravity LMS",

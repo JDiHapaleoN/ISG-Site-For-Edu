@@ -6,6 +6,25 @@ export async function middleware(request: NextRequest) {
         request,
     })
 
+    // CSRF Protection: Block mutating cross-origin requests
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method)) {
+        const origin = request.headers.get('origin') ?? request.headers.get('referer');
+        const host = request.headers.get('host');
+
+        if (origin && host) {
+            try {
+                const originUrl = new URL(origin);
+                // Strip port from host for robustness if needed, but nextUrl.host is usually reliable
+                if (originUrl.host !== host) {
+                    console.warn(`[Security] CSRF Blocked: Origin ${originUrl.host} !== Host ${host} on ${request.nextUrl.pathname}`);
+                    return new NextResponse("Forbidden - CSRF origin mismatch", { status: 403 });
+                }
+            } catch (e) {
+                return new NextResponse("Forbidden - Invalid origin format", { status: 403 });
+            }
+        }
+    }
+
     const supabase = createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,

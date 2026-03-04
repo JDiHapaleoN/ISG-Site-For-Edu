@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { ensurePrismaUser } from "@/lib/auth-sync";
 import { checkRateLimit, AI_RATE_LIMIT, getClientIp } from "@/lib/rate-limit";
+import { trackEvent, EVENTS } from "@/lib/analytics";
 
 export async function POST(req: Request) {
     try {
@@ -93,6 +94,8 @@ Output ONLY a JSON object with this exact structure:
                 aiFeedback: parsedResponse.feedback
             }
         });
+
+        trackEvent(EVENTS.FEYNMAN_SUBMITTED, user.id, { topic: concept, score: numericScore });
 
         return NextResponse.json({
             feedback: parsedResponse.feedback,

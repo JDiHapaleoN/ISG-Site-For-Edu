@@ -256,3 +256,19 @@ model OrganizerHabit {
 
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
+
+// ============================================
+// ANALYTICS
+// ============================================
+
+model AnalyticsEvent {
+  id        String   @id @default(uuid())
+  userId    String?
+  event     String   // e.g., 'srs_card_reviewed', 'wizard_completed'
+  metadata  Json?    // Arbitrary event-specific data
+  createdAt DateTime @default(now())
+
+  @@index([event])
+  @@index([userId])
+  @@index([createdAt])
+}

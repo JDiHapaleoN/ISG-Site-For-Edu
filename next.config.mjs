@@ -34,10 +34,25 @@ const nextConfig = {
                     {
                         key: 'Referrer-Policy',
                         value: 'origin-when-cross-origin'
+                    },
+                    {
+                        key: 'X-Permitted-Cross-Domain-Policies',
+                        value: 'none'
+                    },
+                    {
+                        key: 'Permissions-Policy',
+                        value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()'
+                    },
+                    {
+                        key: 'Content-Security-Policy',
+                        value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://js.sentry-cdn.com https://browser.sentry-cdn.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https://*.supabase.co https://*.sentry.io wss://*.supabase.co; frame-src 'self';"
                     }
                 ]
             }
         ];
+    },
+    experimental: {
+        optimizePackageImports: ["lucide-react", "framer-motion", "katex", "react-katex"],
     }
 };
 

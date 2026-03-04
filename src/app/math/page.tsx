@@ -1,7 +1,9 @@
-import MathGlossary from "@/components/math/MathGlossary";
-import MathErrorLog from "@/components/math/MathErrorLog";
-import AlgorithmBank from "@/components/math/AlgorithmBank";
+import dynamic from 'next/dynamic';
 import { Sigma } from "lucide-react";
+
+const MathGlossary = dynamic(() => import("@/components/math/MathGlossary"), { ssr: false });
+const MathErrorLog = dynamic(() => import("@/components/math/MathErrorLog"), { ssr: false });
+const AlgorithmBank = dynamic(() => import("@/components/math/AlgorithmBank"), { ssr: false });
 
 export const metadata = {
     title: "Math Hub | Antigravity LMS",

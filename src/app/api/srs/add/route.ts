@@ -5,6 +5,7 @@ import { ensurePrismaUser } from "@/lib/auth-sync";
 import { srsAddSchema, englishWordSchema, germanWordSchema } from "@/lib/validations";
 import { checkRateLimit, WORD_CREATION_RATE_LIMIT, getClientIp } from "@/lib/rate-limit";
 import { invalidateDeckMetadata } from "@/lib/redis";
+import { trackEvent, EVENTS } from "@/lib/analytics";
 
 export async function POST(req: Request) {
     try {
@@ -81,6 +82,8 @@ export async function POST(req: Request) {
             // Invalidate cache
             await invalidateDeckMetadata(user.id, "english");
 
+            trackEvent(EVENTS.SRS_WORD_ADDED, user.id, { module: "english", wordId: newWord.id });
+
             return NextResponse.json({ success: true, word: newWord });
 
         } else {
@@ -108,6 +111,8 @@ export async function POST(req: Request) {
 
             // Invalidate cache
             await invalidateDeckMetadata(user.id, "german");
+
+            trackEvent(EVENTS.SRS_WORD_ADDED, user.id, { module: "german", wordId: newWord.id });
 
             return NextResponse.json({ success: true, word: newWord });
         }
