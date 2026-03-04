@@ -52,7 +52,9 @@ export default function SpeakingSimulator({ topics, categories, module }: Props)
 
             recognitionRef.current.onerror = (event: any) => {
                 console.error("Speech recognition error", event.error);
-                if (event.error !== 'no-speech' && event.error !== 'aborted') {
+                if (event.error === 'not-allowed') {
+                    toast.error("Доступ к микрофону запрещен. Разрешите его в настройках браузера (значок замка в адресной строке).");
+                } else if (event.error !== 'no-speech' && event.error !== 'aborted') {
                     toast.error("Ошибка распознавания речи: " + event.error);
                 }
                 setIsRecording(false);
@@ -70,16 +72,34 @@ export default function SpeakingSimulator({ topics, categories, module }: Props)
         };
     }, [module]);
 
-    const startRecording = () => {
+    const startRecording = async () => {
         setTranscript("");
         setAnalysisResult(null);
+
+        try {
+            // Explicitly request microphone access to trigger the browser prompt
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            // Immediately stop tracks as SpeechRecognition handles its own stream
+            stream.getTracks().forEach(track => track.stop());
+        } catch (err) {
+            console.error("Microphone access denied", err);
+            toast.error("Доступ к микрофону запрещен. Разрешите его в браузере (значок замка в адресной строке).");
+            setIsRecording(false);
+            return;
+        }
+
         setIsRecording(true);
         if (recognitionRef.current) {
             try {
                 recognitionRef.current.start();
             } catch (e) {
                 console.error("Failed to start recognition", e);
+                toast.error("Ошибка запуска распознавания речи. Попробуйте перезагрузить страницу.");
+                setIsRecording(false);
             }
+        } else {
+            toast.error("Ваш браузер не поддерживает голосовое распознавание (используйте Chrome/Safari).");
+            setIsRecording(false);
         }
     };
 
