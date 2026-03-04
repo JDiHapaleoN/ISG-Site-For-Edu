@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, Loader2, Trash2, BookOpen, Clock, AlertCircle } from "lucide-react";
+import { Search, Loader2, Trash2, BookOpen, Clock, AlertCircle, PlayCircle } from "lucide-react";
 import { EnglishWord, GermanWord } from "@prisma/client";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -12,21 +12,50 @@ interface SrsDictionaryProps {
 
 type WordCard = EnglishWord | GermanWord;
 
+// Helper to calculate exact SM-2 interval based on the backend API logic
+function getIntervalStr(word: WordCard, quality: number) {
+    let { srsStep, interval, easiness } = word;
+    if (quality < 3) return "< 1м";
+
+    let newInterval = 1;
+    if (srsStep === 0) newInterval = 1;
+    else if (srsStep === 1) newInterval = 6;
+    else newInterval = Math.round(interval * easiness);
+
+    if (quality === 5 && srsStep > 1) {
+        newInterval = Math.round(interval * Math.max(1.3, easiness + 0.1) * 1.2);
+    }
+
+    if (newInterval === 1) return "1 дн";
+    if (newInterval < 30) return `${newInterval} дн`;
+    if (newInterval < 365) return `${Math.round(newInterval / 30)} мес`;
+    return `${Math.round(newInterval / 365)} г`;
+}
+
 export default function SrsDictionary({ module }: SrsDictionaryProps) {
     const [words, setWords] = useState<WordCard[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
+    const [debouncedQuery, setDebouncedQuery] = useState("");
     const [selectedWord, setSelectedWord] = useState<WordCard | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // Debounce search input
     useEffect(() => {
-        fetchWords();
-    }, [module]);
+        const handler = setTimeout(() => {
+            setDebouncedQuery(searchQuery);
+        }, 500);
+        return () => clearTimeout(handler);
+    }, [searchQuery]);
 
-    const fetchWords = async () => {
+    useEffect(() => {
+        fetchWords(debouncedQuery);
+    }, [module, debouncedQuery]);
+
+    const fetchWords = async (query: string = "") => {
         setIsLoading(true);
         try {
-            const res = await fetch(`/api/srs/dictionary?module=${module}`);
+            const res = await fetch(`/api/srs/dictionary?module=${module}&q=${encodeURIComponent(query)}`);
             if (res.ok) {
                 const data = await res.json();
                 setWords(data);
@@ -35,7 +64,6 @@ export default function SrsDictionary({ module }: SrsDictionaryProps) {
             }
         } catch (error) {
             console.error(error);
-            toast.error("Ошибка сети при загрузке словаря.");
         } finally {
             setIsLoading(false);
         }
@@ -92,16 +120,9 @@ export default function SrsDictionary({ module }: SrsDictionaryProps) {
         }
     };
 
-    const filteredWords = words.filter(w => {
-        const query = searchQuery.toLowerCase();
-        return (
-            w.term.toLowerCase().includes(query) ||
-            w.translation?.toLowerCase().includes(query) ||
-            w.context?.toLowerCase().includes(query)
-        );
-    });
+    const filteredWords = words; // Already filtered by DB
 
-    if (isLoading) {
+    if (isLoading && !words.length) {
         return (
             <div className="flex flex-col items-center justify-center p-12 text-zinc-500">
                 <Loader2 className="w-8 h-8 animate-spin text-indigo-500 mb-4" />
@@ -133,8 +154,13 @@ export default function SrsDictionary({ module }: SrsDictionaryProps) {
                 </div>
 
                 {/* Words List */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-3 overflow-y-auto pr-1 pb-20 md:pb-0" style={{ maxHeight: "calc(100vh - 250px)" }}>
-                    {filteredWords.length === 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-3 overflow-y-auto pr-1 pb-20 md:pb-0 relative" style={{ maxHeight: "calc(100vh - 250px)" }}>
+                    {isLoading && (
+                        <div className="absolute inset-0 bg-white/50 dark:bg-zinc-950/50 backdrop-blur-sm z-10 flex items-center justify-center rounded-2xl">
+                            <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+                        </div>
+                    )}
+                    {filteredWords.length === 0 && !isLoading ? (
                         <div className="col-span-full py-12 text-center text-zinc-500 flex flex-col items-center">
                             <AlertCircle className="w-10 h-10 mb-3 opacity-50" />
                             <p>Ничего не найдено.</p>
@@ -246,34 +272,53 @@ export default function SrsDictionary({ module }: SrsDictionaryProps) {
                                         Следующее повторение: <span className="font-bold text-indigo-500">{new Date(selectedWord.nextReview).toLocaleDateString()}</span>
                                     </p>
 
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                    <div className="grid grid-cols-4 gap-2">
                                         <button
                                             disabled={isSubmitting}
                                             onClick={() => handleReschedule(1)}
-                                            className="px-2 py-3 bg-rose-100 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400 rounded-xl text-xs font-bold hover:bg-rose-200 dark:hover:bg-rose-900/50 transition-colors"
+                                            className="px-1 py-3 bg-rose-100 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400 rounded-xl flex flex-col items-center justify-center hover:bg-rose-200 dark:hover:bg-rose-900/50 transition-colors"
                                         >
-                                            Опять
+                                            <span className="text-xs font-bold leading-none mb-1">Опять</span>
+                                            <span className="text-[10px] opacity-70 leading-none">{getIntervalStr(selectedWord, 1)}</span>
                                         </button>
                                         <button
                                             disabled={isSubmitting}
                                             onClick={() => handleReschedule(2)}
-                                            className="px-2 py-3 bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 rounded-xl text-xs font-bold hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors"
+                                            className="px-1 py-3 bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 rounded-xl flex flex-col items-center justify-center hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors"
                                         >
-                                            Трудно
+                                            <span className="text-xs font-bold leading-none mb-1">Трудно</span>
+                                            <span className="text-[10px] opacity-70 leading-none">{getIntervalStr(selectedWord, 2)}</span>
                                         </button>
                                         <button
                                             disabled={isSubmitting}
                                             onClick={() => handleReschedule(4)}
-                                            className="px-2 py-3 bg-emerald-100 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 rounded-xl text-xs font-bold hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-colors"
+                                            className="px-1 py-3 bg-emerald-100 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 rounded-xl flex flex-col items-center justify-center hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-colors"
                                         >
-                                            Хорошо
+                                            <span className="text-xs font-bold leading-none mb-1">Хорошо</span>
+                                            <span className="text-[10px] opacity-70 leading-none">{getIntervalStr(selectedWord, 4)}</span>
                                         </button>
                                         <button
                                             disabled={isSubmitting}
                                             onClick={() => handleReschedule(5)}
-                                            className="px-2 py-3 bg-cyan-100 dark:bg-cyan-950/30 text-cyan-700 dark:text-cyan-400 rounded-xl text-xs font-bold hover:bg-cyan-200 dark:hover:bg-cyan-900/50 transition-colors"
+                                            className="px-1 py-3 bg-cyan-100 dark:bg-cyan-950/30 text-cyan-700 dark:text-cyan-400 rounded-xl flex flex-col items-center justify-center hover:bg-cyan-200 dark:hover:bg-cyan-900/50 transition-colors"
                                         >
-                                            Легко
+                                            <span className="text-xs font-bold leading-none mb-1">Легко</span>
+                                            <span className="text-[10px] opacity-70 leading-none">{getIntervalStr(selectedWord, 5)}</span>
+                                        </button>
+                                    </div>
+                                    <div className="pt-2">
+                                        <button
+                                            onClick={() => handleReschedule(4)}
+                                            disabled={isSubmitting}
+                                            className="w-full py-3 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-xl text-sm font-bold flex flex-col items-center justify-center hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors border border-indigo-100 dark:border-indigo-800/50"
+                                        >
+                                            <div className="flex items-center gap-1.5 leading-none mb-1">
+                                                <PlayCircle className="w-4 h-4" />
+                                                Начать активное повторение
+                                            </div>
+                                            <span className="text-[10px] font-medium opacity-80 leading-none">
+                                                Снимает таймер задолженности и переносит на завтра
+                                            </span>
                                         </button>
                                     </div>
                                 </div>
