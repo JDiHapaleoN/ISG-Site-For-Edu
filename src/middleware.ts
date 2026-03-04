@@ -71,50 +71,10 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(url)
     }
 
-    // --- IP ANALYZER & SESSION PROTECTION ---
-    if (user) {
-        const rawIp = request.headers.get('x-forwarded-for') || request.ip || '127.0.0.1';
-        const normalizedIp = normalizeIp(rawIp.split(',')[0].trim());
-        const currentIpHash = await generateIpHash(normalizedIp);
-
-        const storedIpHash = request.cookies.get('sb-ip-lock')?.value;
-
-        if (!storedIpHash) {
-            // First time seeing this user session, lock it to their current normalized IP
-            supabaseResponse.cookies.set('sb-ip-lock', currentIpHash, {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: 'lax',
-                path: '/',
-                maxAge: 60 * 60 * 24 * 30 // 30 days
-            });
-        } else if (storedIpHash !== currentIpHash) {
-            // IP has changed significantly (suspicious session hijack or totally new location)
-            // Log them out by removing Supabase auth cookies and the lock
-            console.warn(`[Suspicious Activity] IP Hash Mismatch for user ${user.id}. Forcing logout.`);
-            await supabase.auth.signOut();
-
-            const url = request.nextUrl.clone()
-            url.pathname = '/login'
-            url.searchParams.set('reason', 'ip-changed')
-            const redirectResponse = NextResponse.redirect(url)
-
-            // Delete cookies in the REDIRECT response (not supabaseResponse)
-            request.cookies.getAll().forEach((cookie) => {
-                if (cookie.name.startsWith('sb-') || cookie.name === 'sb-ip-lock') {
-                    redirectResponse.cookies.delete(cookie.name);
-                }
-            });
-
-            return redirectResponse
-        }
-
-        // If user is already logged in and tries to access an auth route, redirect to home
-        if (isAuthRoute) {
-            const url = request.nextUrl.clone()
-            url.pathname = '/'
-            return NextResponse.redirect(url)
-        }
+    if (user && isAuthRoute) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/'
+        return NextResponse.redirect(url)
     }
 
     return supabaseResponse

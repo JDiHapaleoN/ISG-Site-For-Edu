@@ -40,38 +40,38 @@ export default function SrsReview({ module }: SrsReviewProps) {
   };
 
   const handleReview = async (quality: number) => {
-    if (cards.length === 0 || isSubmitting) return;
+    if (cards.length === 0) return;
+
+    // Prevent double rapid clicks on the same card but don't block between cards
+    if (isSubmitting) return;
     setIsSubmitting(true);
 
     const currentCard = cards[currentIndex];
 
-    try {
-      const res = await fetch("/api/srs/review", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          wordId: currentCard.id,
-          quality,
-          module,
-        }),
-      });
-
-      if (res.ok) {
-        // Move to next card
-        if (currentIndex < cards.length - 1) {
-          setCurrentIndex(currentIndex + 1);
-          setIsFlipped(false);
-        } else {
-          setSessionComplete(true);
-        }
-      } else {
-        console.error("Failed to submit review");
-      }
-    } catch (error) {
-      console.error("API error during review", error);
-    } finally {
+    // Optimistically update the UI to move to the next card IMMEDIATELY
+    const nextIndex = currentIndex + 1;
+    if (nextIndex < cards.length) {
+      setCurrentIndex(nextIndex);
+      setIsFlipped(false);
+      // Brief delay to allow UI to transition before lifting the submission lock
+      setTimeout(() => setIsSubmitting(false), 300);
+    } else {
+      setSessionComplete(true);
       setIsSubmitting(false);
     }
+
+    // Fire the API call in the background without `await`
+    fetch("/api/srs/review", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        wordId: currentCard.id,
+        quality,
+        module,
+      }),
+    }).catch(error => {
+      console.error("API error during review", error);
+    });
   };
 
   if (isLoading) {

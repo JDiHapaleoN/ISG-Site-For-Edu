@@ -56,7 +56,10 @@ export default function RegisterPage() {
     };
 
     return (
-        <div className="min-h-screen w-full flex items-center justify-center p-4 relative overflow-hidden bg-zinc-50 dark:bg-zinc-950">
+        <div
+            className="min-h-screen w-full flex items-center justify-center p-4 relative overflow-hidden bg-zinc-50 dark:bg-zinc-950"
+            style={{ marginTop: "calc(-1 * (env(safe-area-inset-top) + 4rem))" }}
+        >
             {/* Animated Background Elements */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
                 <motion.div
