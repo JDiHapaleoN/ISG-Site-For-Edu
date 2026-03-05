@@ -79,10 +79,59 @@ async function fetchOpenAIFallback(prompt: string, timeoutMs: number) {
 }
 
 /**
+ * Groq Call helper for fallback (Free & Fast)
+ */
+async function fetchGroqFallback(prompt: string, timeoutMs: number) {
+    if (!process.env.GROQ_API_KEY) {
+        throw new Error("GROQ_API_KEY is not configured.");
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${process.env.GROQ_API_KEY}`
+            },
+            body: JSON.stringify({
+                model: "llama-3.3-70b-versatile", // Powerful and free-tier available
+                messages: [{ role: "user", content: prompt }]
+            }),
+            signal: controller.signal
+        });
+
+        clearTimeout(timeout);
+
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(`Groq API error: ${response.status} ${err?.error?.message || ''}`);
+        }
+
+        const data = await response.json();
+        const text = data.choices?.[0]?.message?.content;
+
+        if (!text) throw new Error("Empty response from Groq");
+
+        return {
+            response: {
+                text: () => text
+            }
+        };
+    } catch (e: any) {
+        clearTimeout(timeout);
+        throw e;
+    }
+}
+
+/**
  * Generate content with:
  * - Redis caching (24h)
  * - Model fallback chain
  * - OpenAI Fallback chain
+ * - Groq Fallback chain (New)
  * - 30s AbortController timeout per attempt
  * - Exponential backoff on 429 (rate limit)
  * - Response validation
@@ -209,6 +258,23 @@ export async function generateContentWithFallback(
             }
         } catch (openaiErr: any) {
             console.error(`[OpenAI Fallback Error] ${openaiErr.message}`);
+        }
+    }
+
+    // OpenAI failed or not configured -> Try Groq (Free & Fast)
+    if (process.env.GROQ_API_KEY) {
+        console.info(`[Gemini/Groq] Falling back to Groq Free Cloud...`);
+        try {
+            const groqResult = await fetchGroqFallback(prompt, timeoutMs);
+            const text = groqResult.response.text();
+
+            if (text && text.trim().length >= 10) {
+                await setCachedGeminiResponse(cacheKey, text, 86400); // 24h
+                console.info(`[Groq Fallback] Success`);
+                return groqResult;
+            }
+        } catch (groqErr: any) {
+            console.error(`[Groq Fallback Error] ${groqErr.message}`);
         }
     }
 
