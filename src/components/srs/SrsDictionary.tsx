@@ -300,7 +300,7 @@ export default function SrsDictionary({ module }: SrsDictionaryProps) {
                                     </div>
                                     <div className="pt-2">
                                         <button
-                                            onClick={() => handleReschedule(4)}
+                                            onClick={() => handleReschedule(0)}
                                             disabled={isSubmitting}
                                             className="w-full py-3 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-xl text-sm font-bold flex flex-col items-center justify-center hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors border border-indigo-100 dark:border-indigo-800/50"
                                         >
@@ -309,7 +309,7 @@ export default function SrsDictionary({ module }: SrsDictionaryProps) {
                                                 Начать активное повторение
                                             </div>
                                             <span className="text-[10px] font-medium opacity-80 leading-none">
-                                                Снимает задолженность и переносит вперед по алгоритму
+                                                Снимает задолженность и переносит для немедленного повторения в тренажер
                                             </span>
                                         </button>
                                     </div>
