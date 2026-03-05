@@ -5,6 +5,9 @@ import { ensurePrismaUser } from "@/lib/auth-sync";
 import { srsDueModuleSchema } from "@/lib/validations";
 import { getCachedDeckMetadata, setCachedDeckMetadata } from "@/lib/redis";
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const moduleParam = searchParams.get('module');

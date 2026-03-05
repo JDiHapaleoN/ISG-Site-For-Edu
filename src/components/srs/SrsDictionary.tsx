@@ -88,9 +88,10 @@ export default function SrsDictionary({ module }: SrsDictionaryProps) {
             });
 
             if (res.ok) {
+                const updatedWord = await res.json();
+                setWords(prev => prev.map(w => w.id === selectedWord.id ? updatedWord : w));
                 toast.success("Слово успешно перенесено!");
                 setSelectedWord(null);
-                fetchWords(); // Refresh the list to get new dates
             } else {
                 toast.error("Не удалось перенести карточку.");
             }
