@@ -75,15 +75,15 @@ export function formatIntervalUI(days: number): string {
     if (hours < 24) {
         return `${hours} ${pluralizeRu(hours, ["час", "часа", "часов"])}`;
     }
-    const floorDays = Math.floor(days);
-    if (floorDays < 30) {
-        return `${floorDays} ${pluralizeRu(floorDays, ["день", "дня", "дней"])}`;
+    const roundedDays = Math.round(days);
+    if (roundedDays < 30) {
+        return `${roundedDays} ${pluralizeRu(roundedDays, ["день", "дня", "дней"])}`;
     }
-    if (floorDays < 365) {
-        const months = Math.floor(floorDays / 30);
+    if (roundedDays < 365) {
+        const months = Math.round(roundedDays / 30);
         return `${months} ${pluralizeRu(months, ["месяц", "месяца", "месяцев"])}`;
     }
-    const years = Math.floor(floorDays / 365);
+    const years = Math.round(roundedDays / 365);
     return `${years} ${pluralizeRu(years, ["год", "года", "лет"])}`;
 }
 

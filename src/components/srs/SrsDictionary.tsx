@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 
-import { Search, Loader2, Trash2, BookOpen, Clock, AlertCircle, PlayCircle, Plus, X } from "lucide-react";
+import { Search, Loader2, Trash2, BookOpen, Clock, AlertCircle, PlayCircle, Plus, X, Sparkles } from "lucide-react";
 import { EnglishWord, GermanWord } from "@prisma/client";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -22,6 +22,7 @@ export default function SrsDictionary({ module }: SrsDictionaryProps) {
     const [debouncedQuery, setDebouncedQuery] = useState("");
     const [selectedWord, setSelectedWord] = useState<WordCard | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isGenerating, setIsGenerating] = useState(false);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [newWordForm, setNewWordForm] = useState({
         word: "",
@@ -96,6 +97,44 @@ export default function SrsDictionary({ module }: SrsDictionaryProps) {
             toast.error("Ошибка сети.");
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    const handleAutoFill = async () => {
+        if (!newWordForm.word.trim()) {
+            toast.error("Сначала введите слово для перевода.");
+            return;
+        }
+
+        setIsGenerating(true);
+        try {
+            const res = await fetch("/api/srs/generate-card", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    word: newWordForm.word.trim(),
+                    module
+                })
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                setNewWordForm(prev => ({
+                    ...prev,
+                    translation: data.translation || prev.translation,
+                    contextSentence: data.context || prev.contextSentence,
+                    transcription: data.transcription || prev.transcription
+                }));
+                toast.success("Карточка заполнена ИИ!");
+            } else {
+                const errorData = await res.json();
+                toast.error(errorData.error || "Ошибка генерации ИИ.");
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error("Ошибка сети при обращении к ИИ.");
+        } finally {
+            setIsGenerating(false);
         }
     };
 
@@ -411,14 +450,28 @@ export default function SrsDictionary({ module }: SrsDictionaryProps) {
                                     <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                                         Слово <span className="text-red-500">*</span>
                                     </label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={newWordForm.word}
-                                        onChange={e => setNewWordForm({ ...newWordForm, word: e.target.value })}
-                                        className="w-full p-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-indigo-500"
-                                        placeholder="Например: Apple"
-                                    />
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            required
+                                            value={newWordForm.word}
+                                            onChange={e => setNewWordForm({ ...newWordForm, word: e.target.value })}
+                                            className="w-full p-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-indigo-500"
+                                            placeholder="Например: Apple"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={handleAutoFill}
+                                            disabled={isGenerating || !newWordForm.word.trim() || isSubmitting}
+                                            className="px-4 bg-amber-100 hover:bg-amber-200 text-amber-600 dark:bg-amber-900/30 dark:hover:bg-amber-800/50 dark:text-amber-400 rounded-xl transition-colors shrink-0 flex items-center justify-center font-medium disabled:opacity-50"
+                                            title="Сгенерировать перевод и контекст через ИИ"
+                                        >
+                                            {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
+                                        </button>
+                                    </div>
+                                    <p className="text-xs text-zinc-500 mt-1.5 ml-1">
+                                        Введите слово и нажмите ✨, чтобы ИИ заполнил остальное.
+                                    </p>
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
