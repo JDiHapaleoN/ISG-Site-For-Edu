@@ -29,6 +29,7 @@ export default async function ReaderPage({
     // 1. URL Param is the source of truth for the active module view
     let activeModule = searchParams.lang === "english" ? "english" : "german";
     let dbCustomText = "";
+    let dbHighlights: number[] = [];
 
     // 2. Load custom text ONLY if the user is viewing the language they last saved text for.
     if (user) {
@@ -45,6 +46,9 @@ export default async function ReaderPage({
         // Only load their custom text if the current tab matches the language of their saved text
         if (dbUser?.activeReaderText && dbUser?.activeReaderModule === activeModule) {
             dbCustomText = dbUser.activeReaderText;
+            if (dbUser.activeReaderHighlights) {
+                dbHighlights = dbUser.activeReaderHighlights;
+            }
         }
     }
 
@@ -88,7 +92,7 @@ export default async function ReaderPage({
             </div>
 
             {/* Use key to force unmount/remount when module changes to clear React state easily */}
-            <InteractiveReader key={module} initialText={text} module={module} />
+            <InteractiveReader key={module} initialText={text} module={module} initialHighlights={dbHighlights} />
         </main>
     );
 }

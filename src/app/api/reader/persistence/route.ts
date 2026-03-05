@@ -13,14 +13,15 @@ export async function POST(request: Request) {
 
     await ensurePrismaUser(user)
 
-    const { text, module } = await request.json()
+    const { text, module, highlights } = await request.json()
 
     try {
         await prisma.user.update({
             where: { email: user.email },
             data: {
                 activeReaderText: text,
-                activeReaderModule: module
+                activeReaderModule: module,
+                activeReaderHighlights: highlights || []
             }
         })
         return NextResponse.json({ success: true })

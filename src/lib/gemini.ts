@@ -31,9 +31,58 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
+ * OpenAI Call helper for fallback
+ */
+async function fetchOpenAIFallback(prompt: string, timeoutMs: number) {
+    if (!process.env.CHATGPT_API_KEY) {
+        throw new Error("CHATGPT_API_KEY is not configured.");
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+        const response = await fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${process.env.CHATGPT_API_KEY}`
+            },
+            body: JSON.stringify({
+                model: "gpt-4o-mini", // fast and cost-effective
+                messages: [{ role: "user", content: prompt }]
+            }),
+            signal: controller.signal
+        });
+
+        clearTimeout(timeout);
+
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(`OpenAI API error: ${response.status} ${err?.error?.message || ''}`);
+        }
+
+        const data = await response.json();
+        const text = data.choices?.[0]?.message?.content;
+
+        if (!text) throw new Error("Empty response from OpenAI");
+
+        return {
+            response: {
+                text: () => text
+            }
+        };
+    } catch (e: any) {
+        clearTimeout(timeout);
+        throw e;
+    }
+}
+
+/**
  * Generate content with:
  * - Redis caching (24h)
  * - Model fallback chain
+ * - OpenAI Fallback chain
  * - 30s AbortController timeout per attempt
  * - Exponential backoff on 429 (rate limit)
  * - Response validation
@@ -146,10 +195,25 @@ export async function generateContentWithFallback(
             }
         }
     }
+    // All Gemini models exhausted
+    if (process.env.CHATGPT_API_KEY) {
+        console.info(`[Gemini/OpenAI] All Gemini models failed. Falling back to OpenAI ChatGPT...`);
+        try {
+            const chatGptResult = await fetchOpenAIFallback(prompt, timeoutMs);
+            const text = chatGptResult.response.text();
 
-    // All models exhausted
+            if (text && text.trim().length >= 10) {
+                await setCachedGeminiResponse(cacheKey, text, 86400); // 24h
+                console.info(`[OpenAI Fallback] Success`);
+                return chatGptResult;
+            }
+        } catch (openaiErr: any) {
+            console.error(`[OpenAI Fallback Error] ${openaiErr.message}`);
+        }
+    }
+
     throw new GeminiError(
-        `[Gemini] All models failed. Last error: ${lastError?.message}`,
+        `[Gemini] All models and fallbacks failed. Last error: ${lastError?.message}`,
         "ИИ временно недоступен. Попробуйте через несколько минут.",
         503
     );

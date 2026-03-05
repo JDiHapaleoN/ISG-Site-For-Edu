@@ -13,7 +13,7 @@ export async function POST(request: Request) {
 
     await ensurePrismaUser(user)
 
-    const { title, content, module } = await request.json()
+    const { title, content, module, highlights } = await request.json()
 
     try {
         const saved = await prisma.savedText.create({
@@ -22,6 +22,7 @@ export async function POST(request: Request) {
                 title,
                 content,
                 module,
+                highlights: highlights || []
             }
         })
         return NextResponse.json(saved)

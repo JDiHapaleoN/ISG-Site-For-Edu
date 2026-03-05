@@ -24,15 +24,16 @@ export interface WordData {
 interface ReaderProps {
     initialText: string;
     module: "english" | "german";
+    initialHighlights?: number[];
 }
 
-export default function InteractiveReader({ initialText, module }: ReaderProps) {
+export default function InteractiveReader({ initialText, module, initialHighlights }: ReaderProps) {
     const [customText, setCustomText] = useState(initialText);
     const [isEditing, setIsEditing] = useState(initialText === "");
     const [selectedWord, setSelectedWord] = useState<WordData | null>(null);
     const [isTranslating, setIsTranslating] = useState(false);
     const [isAdding, setIsAdding] = useState(false);
-    const [highlights, setHighlights] = useState<Set<number>>(new Set());
+    const [highlights, setHighlights] = useState<Set<number>>(new Set(initialHighlights || []));
     const [isHighlightMode, setIsHighlightMode] = useState(false);
     const [translationError, setTranslationError] = useState<string | null>(null);
 
@@ -46,6 +47,20 @@ export default function InteractiveReader({ initialText, module }: ReaderProps) 
                 const next = new Set(prev);
                 if (next.has(index)) next.delete(index);
                 else next.add(index);
+
+                // Persist highlights in background
+                if (!isEditing) {
+                    fetch('/api/reader/persistence', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            text: customText,
+                            module,
+                            highlights: Array.from(next)
+                        })
+                    }).catch(e => console.error("Failed to save highlights", e));
+                }
+
                 return next;
             });
             return;
@@ -147,7 +162,7 @@ export default function InteractiveReader({ initialText, module }: ReaderProps) 
                                         await fetch('/api/reader/persistence', {
                                             method: 'POST',
                                             headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify({ text: cleaned, module })
+                                            body: JSON.stringify({ text: cleaned, module, highlights: Array.from(highlights) })
                                         });
                                     } catch (e) {
                                         console.error("Failed to persist reader text", e);
@@ -172,7 +187,7 @@ export default function InteractiveReader({ initialText, module }: ReaderProps) 
                                     const res = await fetch('/api/reader/save', {
                                         method: 'POST',
                                         headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ title, content: customText, module })
+                                        body: JSON.stringify({ title, content: customText, module, highlights: Array.from(highlights) })
                                     });
                                     if (res.ok) {
                                         alert("Текст сохранен в вашем профиле! ✨");
