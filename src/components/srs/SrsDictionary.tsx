@@ -90,7 +90,7 @@ export default function SrsDictionary({ module }: SrsDictionaryProps) {
             if (res.ok) {
                 const updatedWord = await res.json();
                 setWords(prev => prev.map(w => w.id === selectedWord.id ? updatedWord : w));
-                toast.success("Слово успешно перенесено!");
+                toast.success(quality === 0 ? "Слово добавлено в тренажёр!" : "Слово успешно перенесено!");
                 setSelectedWord(null);
             } else {
                 toast.error("Не удалось перенести карточку.");
@@ -159,13 +159,13 @@ export default function SrsDictionary({ module }: SrsDictionaryProps) {
                             >
                                 <div className="flex justify-between items-start w-full gap-2">
                                     <h3 className="font-bold text-lg text-zinc-900 dark:text-zinc-100 truncate">{word.term}</h3>
-                                    {word.srsStep > 0 && new Date(word.nextReview) > new Date() && (
+                                    {((word.srsStep > 0 || (word.nextReview && new Date(word.nextReview) <= new Date())) && new Date(word.nextReview) > new Date()) && (
                                         <div className="flex items-center gap-1.5 shrink-0 bg-rose-50 dark:bg-rose-950/30 text-rose-500 px-2 py-0.5 rounded-full text-[10px] font-bold" title="Таймер активен">
                                             <div className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
-                                            {new Date(word.nextReview).toLocaleString("ru", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                                            {formatIntervalUI((new Date(word.nextReview).getTime() - Date.now()) / (1000 * 60 * 60 * 24))}
                                         </div>
                                     )}
-                                    {word.srsStep > 0 && new Date(word.nextReview) <= new Date() && (
+                                    {(word.srsStep === 0 || new Date(word.nextReview) <= new Date()) && (
                                         <div className="flex items-center gap-1.5 shrink-0 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 px-2 py-0.5 rounded-full text-[10px] font-bold" title="Ожидает повторения в тренажере">
                                             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                                             Пора повторить

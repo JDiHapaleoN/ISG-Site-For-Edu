@@ -12,11 +12,14 @@ export function calculateNextSequence(
         newRepetitions = 0;
         newInterval = -1; // Instantly due
         newEasiness = 1.3;
-    } else if (quality === 1) {
+        return { newRepetitions, newEasiness, newInterval };
+    }
+
+    if (quality === 1) {
         newRepetitions = 0;
         newInterval = 1 / (24 * 60); // 1 min (Again)
     } else if (quality === 2 || quality === 3) {
-        if (repetitions === 0) {
+        if (repetitions <= 1) {
             newInterval = 5 / (24 * 60); // 5 min (Hard)
         } else {
             newInterval = Math.max(1 / 24, Math.round(interval * 1.2 * 100) / 100);
