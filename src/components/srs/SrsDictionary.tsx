@@ -28,7 +28,8 @@ export default function SrsDictionary({ module }: SrsDictionaryProps) {
         word: "",
         translation: "",
         contextSentence: "",
-        transcription: "" // or article for german, can repurpose
+        transcription: "", // or article for german, can repurpose
+        mnemonic: ""
     });
 
     // Debounce search input
@@ -123,7 +124,8 @@ export default function SrsDictionary({ module }: SrsDictionaryProps) {
                     ...prev,
                     translation: data.translation || prev.translation,
                     contextSentence: data.context || prev.contextSentence,
-                    transcription: data.transcription || prev.transcription
+                    transcription: data.transcription || prev.transcription,
+                    mnemonic: data.mnemonic || prev.mnemonic
                 }));
                 toast.success("Карточка заполнена ИИ!");
             } else {
@@ -153,11 +155,12 @@ export default function SrsDictionary({ module }: SrsDictionaryProps) {
                 body: JSON.stringify({
                     module,
                     wordData: {
-                        word: newWordForm.word.trim(),
+                        term: newWordForm.word.trim(),
                         translation: newWordForm.translation.trim(),
-                        contextSentence: newWordForm.contextSentence.trim() || null,
-                        transcription: newWordForm.transcription.trim() || null,
-                        article: module === "german" ? newWordForm.transcription.trim() || null : null // repurpose transcription field for article if needed, or just let it be null. Wait, the schema allows article.
+                        context: newWordForm.contextSentence.trim() || null,
+                        transcription: module === 'english' ? (newWordForm.transcription.trim() || null) : null,
+                        article: module === 'german' ? (newWordForm.transcription.trim() || null) : null,
+                        mnemonic: newWordForm.mnemonic.trim() || null
                     }
                 })
             });
@@ -166,7 +169,7 @@ export default function SrsDictionary({ module }: SrsDictionaryProps) {
                 mutate(); // Refresh the list
                 toast.success("Слово добавлено!");
                 setIsAddModalOpen(false);
-                setNewWordForm({ word: "", translation: "", contextSentence: "", transcription: "" });
+                setNewWordForm({ word: "", translation: "", contextSentence: "", transcription: "", mnemonic: "" });
             } else {
                 const data = await res.json();
                 toast.error(data.error || "Не удалось добавить слово.");
@@ -495,6 +498,18 @@ export default function SrsDictionary({ module }: SrsDictionaryProps) {
                                         onChange={e => setNewWordForm({ ...newWordForm, contextSentence: e.target.value })}
                                         className="w-full p-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-indigo-500"
                                         placeholder="Необязательно"
+                                        rows={2}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                                        Мнемоника / Ассоциация
+                                    </label>
+                                    <textarea
+                                        value={newWordForm.mnemonic}
+                                        onChange={e => setNewWordForm({ ...newWordForm, mnemonic: e.target.value })}
+                                        className="w-full p-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-amber-500"
+                                        placeholder="Ассоциация для легкого запоминания..."
                                         rows={2}
                                     />
                                 </div>
