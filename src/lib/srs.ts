@@ -19,30 +19,14 @@ export function calculateNextSequence(
         newRepetitions = 0;
         newInterval = 1 / (24 * 60); // 1 min (Again)
     } else if (quality === 2 || quality === 3) {
-        if (repetitions <= 1) {
-            newInterval = 5 / (24 * 60); // 5 min (Hard)
-        } else {
-            newInterval = Math.max(1 / 24, Math.round(interval * 1.2 * 100) / 100);
-        }
-        newRepetitions = Math.max(0, repetitions - 1);
+        newRepetitions = 0;
+        newInterval = 5 / (24 * 60); // 5 min (Hard)
     } else if (quality === 4) {
-        if (repetitions === 0) {
-            newInterval = 30 / (24 * 60); // 30 min (Good)
-        } else if (repetitions === 1) {
-            newInterval = 1; // 1 day
-        } else {
-            newInterval = Math.round(interval * easiness * 100) / 100;
-        }
-        newRepetitions += 1;
+        newRepetitions = 1;
+        newInterval = 30 / (24 * 60); // 30 min (Good)
     } else if (quality >= 5) {
-        if (repetitions === 0) {
-            newInterval = 12 / 24; // 12 hours (Easy)
-        } else if (repetitions === 1) {
-            newInterval = 4; // 4 days
-        } else {
-            newInterval = Math.round(interval * easiness * 1.3 * 100) / 100;
-        }
-        newRepetitions += 1;
+        newRepetitions = 1;
+        newInterval = 12 / 24; // 12 hours (Easy)
     }
 
     newEasiness = easiness + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
