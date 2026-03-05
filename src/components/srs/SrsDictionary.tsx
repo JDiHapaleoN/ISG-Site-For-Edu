@@ -2,11 +2,14 @@
 
 import { useState, useEffect } from "react";
 
-import { Search, Loader2, Trash2, BookOpen, Clock, AlertCircle, PlayCircle } from "lucide-react";
+import { Search, Loader2, Trash2, BookOpen, Clock, AlertCircle, PlayCircle, Plus, X } from "lucide-react";
 import { EnglishWord, GermanWord } from "@prisma/client";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+import useSWR from "swr";
 import { calculateNextSequence, formatIntervalUI } from "@/lib/srs";
+
+const fetcher = (url: string) => fetch(url).then(res => res.json());
 
 interface SrsDictionaryProps {
     module: "english" | "german";
@@ -15,12 +18,17 @@ interface SrsDictionaryProps {
 type WordCard = EnglishWord | GermanWord;
 
 export default function SrsDictionary({ module }: SrsDictionaryProps) {
-    const [words, setWords] = useState<WordCard[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
     const [debouncedQuery, setDebouncedQuery] = useState("");
     const [selectedWord, setSelectedWord] = useState<WordCard | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [newWordForm, setNewWordForm] = useState({
+        word: "",
+        translation: "",
+        contextSentence: "",
+        transcription: "" // or article for german, can repurpose
+    });
 
     // Debounce search input
     useEffect(() => {
@@ -30,26 +38,15 @@ export default function SrsDictionary({ module }: SrsDictionaryProps) {
         return () => clearTimeout(handler);
     }, [searchQuery]);
 
-    useEffect(() => {
-        fetchWords(debouncedQuery);
-    }, [module, debouncedQuery]);
-
-    const fetchWords = async (query: string = "") => {
-        setIsLoading(true);
-        try {
-            const res = await fetch(`/api/srs/dictionary?module=${module}&q=${encodeURIComponent(query)}`);
-            if (res.ok) {
-                const data = await res.json();
-                setWords(data);
-            } else {
-                toast.error("Ошибка загрузки словаря.");
-            }
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setIsLoading(false);
+    // Fast loading with SWR
+    const { data: words = [], isLoading, mutate } = useSWR<WordCard[]>(
+        `/api/srs/dictionary?module=${module}&q=${encodeURIComponent(debouncedQuery)}`,
+        fetcher,
+        {
+            keepPreviousData: true,
+            revalidateOnFocus: false
         }
-    };
+    );
 
     const handleDelete = async (id: string) => {
         if (!confirm("Вы уверены, что хотите удалить это слово навсегда?")) return;
@@ -59,7 +56,7 @@ export default function SrsDictionary({ module }: SrsDictionaryProps) {
                 method: "DELETE"
             });
             if (res.ok) {
-                setWords(prev => prev.filter(w => w.id !== id));
+                mutate(); // instantly refresh the cache
                 setSelectedWord(null);
                 toast.success("Слово удалено!");
             } else {
@@ -88,12 +85,52 @@ export default function SrsDictionary({ module }: SrsDictionaryProps) {
             });
 
             if (res.ok) {
-                const updatedWord = await res.json();
-                setWords(prev => prev.map(w => w.id === selectedWord.id ? updatedWord : w));
+                mutate(); // instantly refresh the cache
                 toast.success(quality === 0 ? "Слово добавлено в тренажёр!" : "Слово успешно перенесено!");
                 setSelectedWord(null);
             } else {
                 toast.error("Не удалось перенести карточку.");
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error("Ошибка сети.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleAddSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newWordForm.word.trim() || !newWordForm.translation.trim()) {
+            toast.error("Поля 'Слово' и 'Перевод' обязательны.");
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            const res = await fetch("/api/srs/add", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    module,
+                    wordData: {
+                        word: newWordForm.word.trim(),
+                        translation: newWordForm.translation.trim(),
+                        contextSentence: newWordForm.contextSentence.trim() || null,
+                        transcription: newWordForm.transcription.trim() || null,
+                        article: module === "german" ? newWordForm.transcription.trim() || null : null // repurpose transcription field for article if needed, or just let it be null. Wait, the schema allows article.
+                    }
+                })
+            });
+
+            if (res.ok) {
+                mutate(); // Refresh the list
+                toast.success("Слово добавлено!");
+                setIsAddModalOpen(false);
+                setNewWordForm({ word: "", translation: "", contextSentence: "", transcription: "" });
+            } else {
+                const data = await res.json();
+                toast.error(data.error || "Не удалось добавить слово.");
             }
         } catch (error) {
             console.error(error);
@@ -119,16 +156,28 @@ export default function SrsDictionary({ module }: SrsDictionaryProps) {
 
             {/* Left Col: Search & List */}
             <div className={`flex-1 flex flex-col gap-4 ${selectedWord ? 'hidden md:flex' : 'flex'}`}>
-                {/* Search Bar */}
-                <div className="relative">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
-                    <input
-                        type="text"
-                        placeholder="Поиск по слову, переводу или контексту..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-12 pr-4 py-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium"
-                    />
+                {/* Header Actions */}
+                <div className="flex gap-2 w-full">
+                    {/* Search Bar */}
+                    <div className="relative flex-1">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
+                        <input
+                            type="text"
+                            placeholder="Поиск по слову или переводу..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full pl-12 pr-4 py-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium shadow-sm"
+                        />
+                    </div>
+                    {/* Add Button */}
+                    <button
+                        onClick={() => setIsAddModalOpen(true)}
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white p-4 rounded-2xl transition-colors shadow-sm flex items-center justify-center shrink-0"
+                        title="Добавить слово вручную"
+                    >
+                        <Plus className="w-5 h-5" />
+                        <span className="hidden sm:inline ml-2 font-medium">Добавить</span>
+                    </button>
                 </div>
 
                 <div className="flex items-center justify-between px-2 text-sm text-zinc-500 font-medium font-sans">
@@ -327,6 +376,107 @@ export default function SrsDictionary({ module }: SrsDictionaryProps) {
                             </div>
                         </div>
                     </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Manual Add Word Modal */}
+            <AnimatePresence>
+                {isAddModalOpen && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setIsAddModalOpen(false)}
+                            className="absolute inset-0 bg-zinc-900/60 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            className="relative w-full max-w-md bg-white dark:bg-zinc-900 rounded-2xl shadow-xl overflow-hidden"
+                        >
+                            <div className="p-6 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center">
+                                <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Добавить слово</h3>
+                                <button
+                                    onClick={() => setIsAddModalOpen(false)}
+                                    className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 rounded-lg transition-colors"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            <form onSubmit={handleAddSubmit} className="p-6 space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                                        Слово <span className="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={newWordForm.word}
+                                        onChange={e => setNewWordForm({ ...newWordForm, word: e.target.value })}
+                                        className="w-full p-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-indigo-500"
+                                        placeholder="Например: Apple"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                                        Перевод <span className="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={newWordForm.translation}
+                                        onChange={e => setNewWordForm({ ...newWordForm, translation: e.target.value })}
+                                        className="w-full p-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-indigo-500"
+                                        placeholder="Например: Яблоко"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                                        Пример (Контекст)
+                                    </label>
+                                    <textarea
+                                        value={newWordForm.contextSentence}
+                                        onChange={e => setNewWordForm({ ...newWordForm, contextSentence: e.target.value })}
+                                        className="w-full p-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-indigo-500"
+                                        placeholder="Необязательно"
+                                        rows={2}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                                        {module === 'german' ? 'Артикль / Доп. инфо' : 'Транскрипция'}
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={newWordForm.transcription}
+                                        onChange={e => setNewWordForm({ ...newWordForm, transcription: e.target.value })}
+                                        className="w-full p-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-indigo-500"
+                                        placeholder={module === 'german' ? 'der, die, das...' : '/ˈæp.əl/'}
+                                    />
+                                </div>
+
+                                <div className="pt-4 flex gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsAddModalOpen(false)}
+                                        className="flex-1 py-3 px-4 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-xl font-medium transition-colors"
+                                    >
+                                        Отмена
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={isSubmitting}
+                                        className="flex-1 py-3 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Сохранить"}
+                                    </button>
+                                </div>
+                            </form>
+                        </motion.div>
+                    </div>
                 )}
             </AnimatePresence>
         </div>
