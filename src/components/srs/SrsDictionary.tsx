@@ -159,8 +159,17 @@ export default function SrsDictionary({ module }: SrsDictionaryProps) {
                             >
                                 <div className="flex justify-between items-start w-full gap-2">
                                     <h3 className="font-bold text-lg text-zinc-900 dark:text-zinc-100 truncate">{word.term}</h3>
-                                    {new Date(word.nextReview) <= new Date() && (
-                                        <div className="w-2 h-2 rounded-full bg-rose-500 mt-2 flex-shrink-0" title="Ожидает повторения" />
+                                    {word.srsStep > 0 && new Date(word.nextReview) > new Date() && (
+                                        <div className="flex items-center gap-1.5 shrink-0 bg-rose-50 dark:bg-rose-950/30 text-rose-500 px-2 py-0.5 rounded-full text-[10px] font-bold" title="Таймер активен">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                                            {new Date(word.nextReview).toLocaleString("ru", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                                        </div>
+                                    )}
+                                    {word.srsStep > 0 && new Date(word.nextReview) <= new Date() && (
+                                        <div className="flex items-center gap-1.5 shrink-0 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 px-2 py-0.5 rounded-full text-[10px] font-bold" title="Ожидает повторения в тренажере">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                            Пора повторить
+                                        </div>
                                     )}
                                 </div>
                                 <p className="text-zinc-500 text-sm mt-1 line-clamp-1">{word.translation || "Нет перевода"}</p>
@@ -252,7 +261,7 @@ export default function SrsDictionary({ module }: SrsDictionaryProps) {
                                         <Clock className="w-3.5 h-3.5" /> Перенести / Оценить
                                     </h4>
                                     <p className="text-sm text-zinc-500 mb-2">
-                                        Следующее повторение: <span className="font-bold text-indigo-500">{new Date(selectedWord.nextReview).toLocaleDateString()}</span>
+                                        Следующее повторение: <span className="font-bold text-indigo-500">{new Date(selectedWord.nextReview).toLocaleString("ru", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
                                     </p>
 
                                     <div className="grid grid-cols-4 gap-2">
