@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import useSWR from "swr";
-import { Send, ArrowLeft, Loader2 } from "lucide-react";
+import { Send, ArrowLeft, Loader2, Check, Share2, Mic, Paperclip } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 
@@ -19,7 +19,8 @@ interface Message {
         id: string;
         name: string | null;
         avatarUrl: string | null;
-    }
+    };
+    read: boolean;
 }
 
 const fetcher = (url: string) => fetch(url).then(r => {
@@ -197,6 +198,10 @@ export default function ChatPage({ params }: { params: { friendId: string } }) {
                                     <div className="h-4">
                                         {isTyping ? (
                                             <span className="text-xs text-indigo-500 font-medium animate-pulse transition-opacity">печатает...</span>
+                                        ) : friendData?.activeReaderText ? (
+                                            <span className="text-xs text-zinc-500 font-medium truncate max-w-[150px] inline-block">
+                                                📖 {friendData.activeReaderText}
+                                            </span>
                                         ) : (
                                             <span className="text-xs text-zinc-400 font-medium">в сети</span>
                                         )}
@@ -246,9 +251,17 @@ export default function ChatPage({ params }: { params: { friendId: string } }) {
                                     : 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-bl-sm border border-zinc-100 dark:border-zinc-700/50'
                                     }`}>
                                     <p className="whitespace-pre-wrap break-words">{msg.content}</p>
-                                    <span className={`text-[10px] font-medium absolute -bottom-6 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap ${isMe ? 'right-2 text-zinc-400' : 'left-2 text-zinc-400'}`}>
-                                        {new Date(msg.createdAt).toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" })}
-                                    </span>
+                                    <div className={`flex items-center gap-1 absolute -bottom-6 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap ${isMe ? 'right-2' : 'left-2'}`}>
+                                        <span className="text-[10px] font-medium text-zinc-400">
+                                            {new Date(msg.createdAt).toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" })}
+                                        </span>
+                                        {isMe && (
+                                            <div className="flex -space-x-1.5 translate-y-0.5">
+                                                <Check className={`w-3 h-3 ${msg.read ? 'text-indigo-400' : 'text-zinc-400 opacity-50'}`} />
+                                                {msg.read && <Check className="w-3 h-3 text-indigo-400 -ml-1" />}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         );
@@ -267,30 +280,50 @@ export default function ChatPage({ params }: { params: { friendId: string } }) {
                     )}
                 </div>
 
-                {/* Chat Input */}
+                {/* Chat Input Area */}
                 <form
                     onSubmit={(e) => { e.preventDefault(); handleSend(); }}
                     className="bg-zinc-50 dark:bg-zinc-950 md:bg-white md:dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800 p-4 md:p-6 shrink-0 md:rounded-b-[2.5rem]"
                 >
-                    <div className="relative flex items-end bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700/50 rounded-[2rem] shadow-inner focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-indigo-500 transition-all">
-                        <textarea
-                            value={newMessage}
-                            onChange={(e) => handleInputChange(e.target.value)}
-                            onKeyDown={handleKeyDown}
-                            placeholder="Написать сообщение..."
-                            className="w-full bg-transparent min-h-[56px] max-h-[150px] resize-none py-4 px-6 pr-14 outline-none text-zinc-900 dark:text-zinc-100 rounded-[2rem]"
-                            rows={1}
-                            style={{ height: newMessage.split('\n').length * 24 + 32 + 'px' }}
-                        />
+                    <div className="flex items-end gap-2 md:gap-4">
                         <button
-                            type="submit"
-                            disabled={!newMessage.trim() || isSending}
-                            className="absolute right-2 bottom-2 w-10 h-10 bg-indigo-500 hover:bg-indigo-600 disabled:bg-zinc-300 dark:disabled:bg-zinc-800 text-white rounded-full flex items-center justify-center transition-all disabled:cursor-not-allowed group"
+                            type="button"
+                            className="p-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-indigo-500 rounded-full transition-all shrink-0 mb-1"
+                            title="Прикрепить"
+                            onClick={() => toast.info("Функция вложений скоро появится!")}
                         >
-                            <Send className="w-5 h-5 ml-1 group-enabled:group-hover:translate-x-0.5 group-enabled:group-hover:-translate-y-0.5 transition-transform" />
+                            <Paperclip className="w-6 h-6" />
+                        </button>
+
+                        <div className="relative flex-1 flex items-end bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700/50 rounded-[2rem] shadow-inner focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-indigo-500 transition-all">
+                            <textarea
+                                value={newMessage}
+                                onChange={(e) => handleInputChange(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                placeholder="Написать сообщение..."
+                                className="w-full bg-transparent min-h-[56px] max-h-[150px] resize-none py-4 px-6 pr-14 outline-none text-zinc-900 dark:text-zinc-100 rounded-[2rem]"
+                                rows={1}
+                                style={{ height: newMessage.split('\n').length * 24 + 32 + 'px' }}
+                            />
+                            <button
+                                type="submit"
+                                disabled={!newMessage.trim() || isSending}
+                                className="absolute right-2 bottom-2 w-10 h-10 bg-indigo-500 hover:bg-indigo-600 disabled:bg-zinc-300 dark:disabled:bg-zinc-800 text-white rounded-full flex items-center justify-center transition-all disabled:cursor-not-allowed group"
+                            >
+                                <Send className="w-5 h-5 ml-1 group-enabled:group-hover:translate-x-0.5 group-enabled:group-hover:-translate-y-0.5 transition-transform" />
+                            </button>
+                        </div>
+
+                        <button
+                            type="button"
+                            className="p-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-rose-500 rounded-full transition-all shrink-0 mb-1"
+                            title="Голосовое сообщение"
+                            onClick={() => toast.info("Запись голоса в разработке")}
+                        >
+                            <Mic className="w-6 h-6" />
                         </button>
                     </div>
-                    <div className="text-center mt-2 hidden md:block">
+                    <div className="text-center mt-2 hidden md:flex items-center justify-center gap-4">
                         <span className="text-[10px] text-zinc-400 font-medium">Enter — отправить, Shift+Enter — перенос строки</span>
                     </div>
                 </form>
