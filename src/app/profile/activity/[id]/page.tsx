@@ -127,11 +127,18 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
                                     )}
                                 </div>
                             ) : (
-                                <div className="bg-indigo-50 dark:bg-indigo-500/5 p-6 md:p-8 rounded-[2rem] border border-indigo-100 dark:border-indigo-500/10">
-                                    <p className="whitespace-pre-wrap text-indigo-900 dark:text-indigo-200 leading-relaxed">
-                                        {practiceLog.aiFeedback}
-                                    </p>
-                                </div>
+                                practiceLog.aiFeedback.trim().startsWith('<') ? (
+                                    <div
+                                        className="ai-feedback-html"
+                                        dangerouslySetInnerHTML={{ __html: practiceLog.aiFeedback }}
+                                    />
+                                ) : (
+                                    <div className="bg-indigo-50 dark:bg-indigo-500/5 p-6 md:p-8 rounded-[2rem] border border-indigo-100 dark:border-indigo-500/10">
+                                        <p className="whitespace-pre-wrap text-indigo-900 dark:text-indigo-200 leading-relaxed">
+                                            {practiceLog.aiFeedback}
+                                        </p>
+                                    </div>
+                                )
                             )}
                         </div>
                     </div>
