@@ -175,12 +175,16 @@ export default async function ProfilePage() {
                                 <p className="text-zinc-500 text-center py-8">История пуста</p>
                             ) : (
                                 dbUser.practiceLogs.map((log) => (
-                                    <div key={log.id} className="flex gap-5 p-6 bg-white dark:bg-zinc-900 rounded-[2rem] border border-zinc-200 dark:border-zinc-800 shadow-sm transition-all hover:shadow-md">
-                                        <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center shrink-0">
-                                            < Zap className="w-6 h-6 text-indigo-500" />
+                                    <Link
+                                        href={`/profile/activity/${log.id}`}
+                                        key={log.id}
+                                        className="flex gap-5 p-6 bg-white dark:bg-zinc-900 rounded-[2rem] border border-zinc-200 dark:border-zinc-800 shadow-sm transition-all hover:shadow-xl hover:-translate-y-1 hover:border-indigo-500 dark:hover:border-indigo-500 group"
+                                    >
+                                        <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center shrink-0 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
+                                            <Zap className="w-6 h-6 text-indigo-500 group-hover:text-white transition-colors" />
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-base font-bold truncate">{log.topic}</p>
+                                            <p className="text-base font-bold truncate group-hover:text-indigo-500 transition-colors">{log.topic}</p>
                                             <div className="flex items-center gap-3 mt-1 text-sm font-medium">
                                                 <span className="text-zinc-400">{new Date(log.createdAt).toLocaleDateString()}</span>
                                                 {log.score && (
@@ -188,7 +192,7 @@ export default async function ProfilePage() {
                                                 )}
                                             </div>
                                         </div>
-                                    </div>
+                                    </Link>
                                 ))
                             )}
                         </div>
