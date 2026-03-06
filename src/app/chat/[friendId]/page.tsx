@@ -36,9 +36,16 @@ export default function ChatPage({ params }: { params: { friendId: string } }) {
     const [newMessage, setNewMessage] = useState("");
     const [isSending, setIsSending] = useState(false);
     const [isTyping, setIsTyping] = useState(false);
+    const [isRecording, setIsRecording] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
     const [myId, setMyId] = useState<string | null>(null);
-    const supabase = createClient();
+
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const audioChunksRef = useRef<BlobPart[]>([]);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    const supabase = createClient();
 
     // Fetch My ID on load to establish Realtime channel
     useEffect(() => {
@@ -112,9 +119,15 @@ export default function ChatPage({ params }: { params: { friendId: string } }) {
         }
     }, [messages, isTyping]);
 
-    const handleSend = async (e?: React.FormEvent) => {
-        if (e) e.preventDefault();
-        if (!newMessage.trim() || isSending) return;
+    const handleSend = async (e?: any, contentOverride?: string) => {
+        if (e && e.preventDefault) e.preventDefault();
+
+        const contentToSend = (contentOverride || newMessage).trim();
+        if (!contentToSend || isSending) return;
+
+        if (!contentOverride) {
+            setIsSending(true);
+        }
 
         // Clear typing indicator instantly
         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
@@ -126,13 +139,13 @@ export default function ChatPage({ params }: { params: { friendId: string } }) {
         const optimisticMsg = {
             id: `temp-${Date.now()}`,
             senderId: myId || "me",
-            content: newMessage.trim(),
+            content: contentToSend,
             createdAt: new Date().toISOString(),
             sender: { id: myId || "me", name: "I", avatarUrl: null }
         };
 
         const currentMessages = messages || [];
-        setNewMessage("");
+        if (!contentOverride) setNewMessage("");
 
         try {
             await mutate(
@@ -156,7 +169,9 @@ export default function ChatPage({ params }: { params: { friendId: string } }) {
             );
         } catch (error) {
             toast.error("Сообщение не отправлено");
-            setNewMessage(optimisticMsg.content); // Restore
+            if (!contentOverride) setNewMessage(optimisticMsg.content); // Restore
+        } finally {
+            if (!contentOverride) setIsSending(false);
         }
     };
 
@@ -165,6 +180,108 @@ export default function ChatPage({ params }: { params: { friendId: string } }) {
             e.preventDefault();
             handleSend();
         }
+    };
+
+    const uploadAndSendMedia = async (fileOrBlob: Blob | File, filename: string, type: 'audio' | 'image') => {
+        if (!myId) return;
+        setIsUploading(true);
+        try {
+            const ext = filename.split('.').pop() || 'tmp';
+            const path = `chat_media/${myId}/${Date.now()}.${ext}`;
+
+            // Reusing existing public avatars bucket
+            const { data, error } = await supabase.storage
+                .from('avatars')
+                .upload(path, fileOrBlob, {
+                    cacheControl: '3600',
+                    upsert: false
+                });
+
+            if (error) throw error;
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('avatars')
+                .getPublicUrl(data.path);
+
+            const specialContent = type === 'audio' ? `[VOICE]${publicUrl}` : `[IMAGE]${publicUrl}`;
+            await handleSend(specialContent);
+        } catch (error: any) {
+            console.error("Media upload error:", error);
+            toast.error(`Ошибка отправки: ${error.message}`);
+        } finally {
+            setIsUploading(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
+
+    const startRecording = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const mediaRecorder = new MediaRecorder(stream);
+            mediaRecorderRef.current = mediaRecorder;
+            audioChunksRef.current = [];
+
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) audioChunksRef.current.push(e.data);
+            };
+
+            mediaRecorder.onstop = async () => {
+                const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+                await uploadAndSendMedia(audioBlob, 'audio.webm', 'audio');
+                setIsRecording(false);
+            };
+
+            mediaRecorder.start();
+            setIsRecording(true);
+        } catch (err) {
+            console.error("Error accessing microphone:", err);
+            toast.error("Не удалось получить доступ к микрофону");
+        }
+    };
+
+    const stopRecording = () => {
+        if (mediaRecorderRef.current && isRecording) {
+            mediaRecorderRef.current.stop();
+            mediaRecorderRef.current.stream.getTracks().forEach(t => t.stop());
+        }
+    };
+
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error("Файл слишком большой. Максимум 5МБ.");
+            return;
+        }
+        if (!file.type.startsWith('image/')) {
+            toast.error("Пожалуйста, выберите изображение.");
+            return;
+        }
+
+        uploadAndSendMedia(file, file.name, 'image');
+    };
+
+    const renderMessageContent = (content: string) => {
+        if (content.startsWith('[VOICE]')) {
+            const url = content.replace('[VOICE]', '');
+            return (
+                <div className="flex items-center gap-2 pr-10">
+                    <audio src={url} controls className="h-10 w-48 shrink-0" />
+                </div>
+            );
+        }
+        if (content.startsWith('[IMAGE]')) {
+            const url = content.replace('[IMAGE]', '');
+            return (
+                <div className="pr-10">
+                    <a href={url} target="_blank" rel="noopener noreferrer">
+                        <img src={url} className="w-full max-w-[200px] sm:max-w-xs h-auto rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700/50" alt="Chat attachment" loading="lazy" />
+                    </a>
+                </div>
+            );
+        }
+        return <p className="whitespace-pre-wrap break-words pr-12">{content}</p>;
     };
 
     if (error) {
@@ -178,7 +295,7 @@ export default function ChatPage({ params }: { params: { friendId: string } }) {
 
     return (
         <main className="fixed inset-0 pt-20 pb-20 md:pt-20 md:pb-0 md:pl-[100px] flex flex-col bg-zinc-50 dark:bg-zinc-950 z-40 relative">
-            <div className="flex-1 flex flex-col max-w-4xl w-full mx-auto md:py-6 h-full relative">
+            <div className="flex-1 flex flex-col max-w-5xl w-full mx-auto md:py-6 h-full relative">
 
                 {/* Chat Header */}
                 <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border-b border-zinc-200 dark:border-zinc-800 p-4 shrink-0 flex items-center justify-between z-10 sticky top-0 md:rounded-t-[2.5rem] shadow-sm">
@@ -246,19 +363,19 @@ export default function ChatPage({ params }: { params: { friendId: string } }) {
                                         {showAvatar ? (msg.sender.avatarUrl ? <img src={msg.sender.avatarUrl} className="w-full h-full object-cover" /> : msg.sender.name?.[0] || "?") : null}
                                     </div>
                                 )}
-                                <div className={`max-w-[85%] sm:max-w-[75%] px-5 py-3.5 rounded-3xl relative text-[15px] shadow-sm leading-relaxed ${isMe
+                                <div className={`max-w-[85%] px-4 pt-3 pb-2 rounded-3xl relative text-[15px] shadow-sm leading-relaxed flex flex-col ${isMe
                                     ? 'bg-indigo-500 text-white rounded-br-sm'
                                     : 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-bl-sm border border-zinc-100 dark:border-zinc-700/50'
                                     }`}>
-                                    <p className="whitespace-pre-wrap break-words">{msg.content}</p>
-                                    <div className={`flex items-center gap-1 absolute -bottom-6 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap ${isMe ? 'right-2' : 'left-2'}`}>
-                                        <span className="text-[10px] font-medium text-zinc-400">
+                                    {renderMessageContent(msg.content)}
+                                    <div className={`flex items-center gap-1 self-end translate-y-1 -mt-2 -mr-1 ${isMe ? 'text-indigo-200' : 'text-zinc-400'}`}>
+                                        <span className="text-[10px] font-medium opacity-80">
                                             {new Date(msg.createdAt).toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" })}
                                         </span>
                                         {isMe && (
-                                            <div className="flex -space-x-1.5 translate-y-0.5">
-                                                <Check className={`w-3 h-3 ${msg.read ? 'text-indigo-400' : 'text-zinc-400 opacity-50'}`} />
-                                                {msg.read && <Check className="w-3 h-3 text-indigo-400 -ml-1" />}
+                                            <div className="flex -space-x-1.5 translate-y-[1px]">
+                                                <Check className={`w-3 h-3 ${msg.read ? 'text-indigo-200 opacity-100' : 'opacity-60'}`} />
+                                                {msg.read && <Check className="w-3 h-3 text-indigo-200 opacity-100 -ml-1.5" />}
                                             </div>
                                         )}
                                     </div>
@@ -286,39 +403,60 @@ export default function ChatPage({ params }: { params: { friendId: string } }) {
                     className="bg-zinc-50 dark:bg-zinc-950 md:bg-white md:dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800 p-4 md:p-6 shrink-0 md:rounded-b-[2.5rem]"
                 >
                     <div className="flex items-end gap-2 md:gap-4">
+                        <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            ref={fileInputRef}
+                            onChange={handleFileUpload}
+                        />
                         <button
                             type="button"
                             className="p-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-indigo-500 rounded-full transition-all shrink-0 mb-1"
                             title="Прикрепить"
-                            onClick={() => toast.info("Функция вложений скоро появится!")}
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={isUploading}
                         >
-                            <Paperclip className="w-6 h-6" />
+                            <Paperclip className={`w-6 h-6 ${isUploading ? 'animate-pulse' : ''}`} />
                         </button>
 
                         <div className="relative flex-1 flex items-end bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700/50 rounded-[2rem] shadow-inner focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-indigo-500 transition-all">
-                            <textarea
-                                value={newMessage}
-                                onChange={(e) => handleInputChange(e.target.value)}
-                                onKeyDown={handleKeyDown}
-                                placeholder="Написать сообщение..."
-                                className="w-full bg-transparent min-h-[56px] max-h-[150px] resize-none py-4 px-6 pr-14 outline-none text-zinc-900 dark:text-zinc-100 rounded-[2rem]"
-                                rows={1}
-                                style={{ height: newMessage.split('\n').length * 24 + 32 + 'px' }}
-                            />
-                            <button
-                                type="submit"
-                                disabled={!newMessage.trim() || isSending}
-                                className="absolute right-2 bottom-2 w-10 h-10 bg-indigo-500 hover:bg-indigo-600 disabled:bg-zinc-300 dark:disabled:bg-zinc-800 text-white rounded-full flex items-center justify-center transition-all disabled:cursor-not-allowed group"
-                            >
-                                <Send className="w-5 h-5 ml-1 group-enabled:group-hover:translate-x-0.5 group-enabled:group-hover:-translate-y-0.5 transition-transform" />
-                            </button>
+                            {isRecording ? (
+                                <div className="w-full h-[56px] flex items-center px-6 gap-3 select-none">
+                                    <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+                                    <span className="text-zinc-900 dark:text-zinc-100 font-medium animate-pulse">Запись голоса...</span>
+                                </div>
+                            ) : (
+                                <textarea
+                                    value={newMessage}
+                                    onChange={(e) => handleInputChange(e.target.value)}
+                                    onKeyDown={handleKeyDown}
+                                    placeholder="Написать сообщение..."
+                                    className="w-full bg-transparent min-h-[56px] max-h-[150px] resize-none py-4 px-6 pr-14 outline-none text-zinc-900 dark:text-zinc-100 rounded-[2rem]"
+                                    rows={1}
+                                    style={{ height: newMessage.split('\n').length * 24 + 32 + 'px' }}
+                                />
+                            )}
+                            {!isRecording && (
+                                <button
+                                    type="submit"
+                                    disabled={!newMessage.trim() || isSending || isUploading}
+                                    className="absolute right-2 bottom-2 w-10 h-10 bg-indigo-500 hover:bg-indigo-600 disabled:bg-zinc-300 dark:disabled:bg-zinc-800 text-white rounded-full flex items-center justify-center transition-all disabled:cursor-not-allowed group"
+                                >
+                                    {isUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5 ml-1 group-enabled:group-hover:translate-x-0.5 group-enabled:group-hover:-translate-y-0.5 transition-transform" />}
+                                </button>
+                            )}
                         </div>
 
                         <button
                             type="button"
-                            className="p-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-rose-500 rounded-full transition-all shrink-0 mb-1"
+                            className={`p-3 rounded-full transition-all shrink-0 mb-1 ${isRecording ? 'bg-rose-500 text-white hover:bg-rose-600 shadow-md animate-bounce' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-rose-500'}`}
                             title="Голосовое сообщение"
-                            onClick={() => toast.info("Запись голоса в разработке")}
+                            onMouseDown={startRecording}
+                            onMouseUp={stopRecording}
+                            onTouchStart={startRecording}
+                            onTouchEnd={stopRecording}
+                            disabled={isUploading || isSending}
                         >
                             <Mic className="w-6 h-6" />
                         </button>
