@@ -101,7 +101,7 @@ export default function ChatPage({ params }: { params: { friendId: string } }) {
     }
 
     return (
-        <main className="fixed inset-0 pt-[80px] md:pt-0 pb-[80px] md:pb-0 md:pl-[100px] flex flex-col bg-zinc-50 dark:bg-zinc-950">
+        <main className="fixed inset-0 pt-20 pb-20 md:pt-20 md:pb-0 md:pl-[100px] flex flex-col bg-zinc-50 dark:bg-zinc-950 z-40 relative">
             <div className="flex-1 flex flex-col max-w-4xl w-full mx-auto md:py-6 h-full relative">
 
                 {/* Chat Header */}
@@ -158,8 +158,8 @@ export default function ChatPage({ params }: { params: { friendId: string } }) {
                                     </div>
                                 )}
                                 <div className={`max-w-[75%] px-5 py-3 rounded-3xl relative text-[15px] shadow-sm leading-relaxed ${isMe
-                                        ? 'bg-indigo-500 text-white rounded-br-sm'
-                                        : 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-bl-sm border border-zinc-100 dark:border-zinc-700/50'
+                                    ? 'bg-indigo-500 text-white rounded-br-sm'
+                                    : 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-bl-sm border border-zinc-100 dark:border-zinc-700/50'
                                     }`}>
                                     <p className="whitespace-pre-wrap break-words">{msg.content}</p>
                                     <span className={`text-[9px] font-medium absolute -bottom-5 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap ${isMe ? 'right-1 text-zinc-400' : 'left-1 text-zinc-400'}`}>
