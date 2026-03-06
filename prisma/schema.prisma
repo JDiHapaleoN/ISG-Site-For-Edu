@@ -27,6 +27,13 @@ model User {
   avatarUrl     String?
   bannerColor   String?   @default("#6366f1") // Indigo-500 default
   
+  // Friend System
+  friendCode    String?   @unique
+  friendshipsAsUser1 Friendship[] @relation("friendshipUser1")
+  friendshipsAsUser2 Friendship[] @relation("friendshipUser2")
+  messagesSent       Message[]    @relation("messagesSent")
+  messagesReceived   Message[]    @relation("messagesReceived")
+  
   // Isolated Relations mapping
   englishDecks    EnglishDeck[]
   germanDecks     GermanDeck[]
@@ -38,6 +45,35 @@ model User {
   savedTexts      SavedText[]
   organizerTasks  OrganizerTask[]
   organizerHabits OrganizerHabit[]
+}
+
+// ============================================
+// FRIEND SYSTEM & CHAT
+// ============================================
+
+model Friendship {
+  id        String   @id @default(uuid())
+  user1Id   String
+  user2Id   String
+  status    String   @default("pending") // 'pending' | 'accepted' | 'blocked'
+  createdAt DateTime @default(now())
+
+  user1     User     @relation("friendshipUser1", fields: [user1Id], references: [id], onDelete: Cascade)
+  user2     User     @relation("friendshipUser2", fields: [user2Id], references: [id], onDelete: Cascade)
+
+  @@unique([user1Id, user2Id]) // Ensure no duplicate requests
+}
+
+model Message {
+  id         String   @id @default(uuid())
+  senderId   String
+  receiverId String
+  content    String
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  sender     User     @relation("messagesSent", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver   User     @relation("messagesReceived", fields: [receiverId], references: [id], onDelete: Cascade)
 }
 
 model SavedText {
