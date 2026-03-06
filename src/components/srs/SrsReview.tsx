@@ -63,7 +63,7 @@ export default function SrsReview({ module }: SrsReviewProps) {
     }
   };
 
-  const handleReview = async (quality: number) => {
+  const handleReview = (quality: number) => {
     if (cards.length === 0 || isSubmitting) return;
     setIsSubmitting(true);
 
@@ -82,18 +82,19 @@ export default function SrsReview({ module }: SrsReviewProps) {
       setIsFlipped(false);
     }
 
-    // Fire API call with retry
-    try {
-      await fetchWithRetry("/api/srs/review", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          wordId: currentCard.id,
-          quality,
-          module,
-        }),
-      });
-    } catch (error) {
+    // Unlock UI immediately for the next card
+    setTimeout(() => setIsSubmitting(false), 150);
+
+    // Fire API call in background
+    fetchWithRetry("/api/srs/review", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        wordId: currentCard.id,
+        quality,
+        module,
+      }),
+    }).catch((error) => {
       console.error("SRS review failed after retries:", error);
       // Rollback UI state
       if (isLast) {
@@ -102,12 +103,10 @@ export default function SrsReview({ module }: SrsReviewProps) {
       setCurrentIndex(prevIndex);
       setIsFlipped(prevFlipped);
       toast.error("Ошибка сети. Повтор не сохранён. Попробуйте снова.");
-    } finally {
-      setTimeout(() => setIsSubmitting(false), 300);
-    }
+    });
   };
 
-  const handleRequeue = async () => {
+  const handleRequeue = () => {
     if (cards.length === 0 || isSubmitting) return;
     setIsSubmitting(true);
 
@@ -120,27 +119,26 @@ export default function SrsReview({ module }: SrsReviewProps) {
     setCurrentIndex(currentIndex + 1);
     setIsFlipped(false);
 
-    // Fire API call with retry
-    try {
-      await fetchWithRetry("/api/srs/review", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          wordId: currentCard.id,
-          quality: 1,
-          module,
-        }),
-      });
-    } catch (error) {
+    // Unlock UI immediately for the next card
+    setTimeout(() => setIsSubmitting(false), 150);
+
+    // Fire API call in background
+    fetchWithRetry("/api/srs/review", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        wordId: currentCard.id,
+        quality: 1,
+        module,
+      }),
+    }).catch((error) => {
       console.error("SRS requeue failed after retries:", error);
       // Rollback
       setCards(prevCards);
       setCurrentIndex(prevIndex);
       setIsFlipped(true);
       toast.error("Ошибка сети. Карточка не добавлена в очередь.");
-    } finally {
-      setTimeout(() => setIsSubmitting(false), 300);
-    }
+    });
   };
 
   if (isLoading) {
