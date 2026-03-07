@@ -182,12 +182,13 @@ export default function ChatPage({ params }: { params: { friendId: string } }) {
         }
     };
 
-    const uploadAndSendMedia = async (fileOrBlob: Blob | File, filename: string, type: 'audio' | 'image') => {
+    const uploadAndSendMedia = async (fileOrBlob: Blob | File, filename: string, type: 'audio' | 'image' | 'video') => {
         if (!myId) return;
         setIsUploading(true);
         try {
             const ext = filename.split('.').pop() || 'tmp';
-            const path = `chat_media/${myId}/${Date.now()}.${ext}`;
+            // Start path with myId to satisfy typical Supabase RLS policies
+            const path = `${myId}/chat_${Date.now()}.${ext}`;
 
             // Reusing existing public avatars bucket
             const { data, error } = await supabase.storage
@@ -203,8 +204,9 @@ export default function ChatPage({ params }: { params: { friendId: string } }) {
                 .from('avatars')
                 .getPublicUrl(data.path);
 
-            const specialContent = type === 'audio' ? `[VOICE]${publicUrl}` : `[IMAGE]${publicUrl}`;
-            await handleSend(specialContent);
+            let specialContent = `[${type.toUpperCase()}]${publicUrl}`;
+
+            await handleSend(undefined, specialContent);
         } catch (error: any) {
             console.error("Media upload error:", error);
             toast.error(`Ошибка отправки: ${error.message}`);
@@ -233,9 +235,14 @@ export default function ChatPage({ params }: { params: { friendId: string } }) {
 
             mediaRecorder.start();
             setIsRecording(true);
-        } catch (err) {
+        } catch (err: any) {
             console.error("Error accessing microphone:", err);
-            toast.error("Не удалось получить доступ к микрофону");
+            // Better error reporting for insecure contexts like HTTP on mobile devices
+            if (err.name === 'NotAllowedError' || err.name === 'SecurityError') {
+                toast.error("Нет доступа к микрофону. Разрешите доступ в браузере.");
+            } else {
+                toast.error("Ошибка микрофона. Убедитесь, что записываете через HTTPS или Localhost.");
+            }
         }
     };
 
@@ -250,16 +257,20 @@ export default function ChatPage({ params }: { params: { friendId: string } }) {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        if (file.size > 5 * 1024 * 1024) {
-            toast.error("Файл слишком большой. Максимум 5МБ.");
-            return;
-        }
-        if (!file.type.startsWith('image/')) {
-            toast.error("Пожалуйста, выберите изображение.");
+        if (file.size > 20 * 1024 * 1024) {
+            toast.error("Файл слишком большой. Максимум 20МБ.");
             return;
         }
 
-        uploadAndSendMedia(file, file.name, 'image');
+        const isImage = file.type.startsWith('image/');
+        const isVideo = file.type.startsWith('video/');
+
+        if (!isImage && !isVideo) {
+            toast.error("Пожалуйста, выберите изображение или видео.");
+            return;
+        }
+
+        uploadAndSendMedia(file, file.name, isImage ? 'image' : 'video');
     };
 
     const renderMessageContent = (content: string) => {
@@ -278,6 +289,14 @@ export default function ChatPage({ params }: { params: { friendId: string } }) {
                     <a href={url} target="_blank" rel="noopener noreferrer">
                         <img src={url} className="w-full max-w-[200px] sm:max-w-xs h-auto rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700/50" alt="Chat attachment" loading="lazy" />
                     </a>
+                </div>
+            );
+        }
+        if (content.startsWith('[VIDEO]')) {
+            const url = content.replace('[VIDEO]', '');
+            return (
+                <div className="pr-10">
+                    <video src={url} controls className="w-full max-w-[200px] sm:max-w-xs h-auto rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700/50" />
                 </div>
             );
         }
@@ -405,7 +424,7 @@ export default function ChatPage({ params }: { params: { friendId: string } }) {
                     <div className="flex items-end gap-2 md:gap-4">
                         <input
                             type="file"
-                            accept="image/*"
+                            accept="image/*,video/*"
                             className="hidden"
                             ref={fileInputRef}
                             onChange={handleFileUpload}
