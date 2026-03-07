@@ -48,12 +48,6 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Word not found" }, { status: 404 });
         }
 
-        // Dedup guard: if word was updated < 2 seconds ago, skip
-        const timeSinceLastUpdate = Date.now() - new Date(word.updatedAt).getTime();
-        if (timeSinceLastUpdate < 2000) {
-            return NextResponse.json(word); // Return current state, already updated
-        }
-
         // 5. Calculate new SM-2 values
         const { newRepetitions, newEasiness, newInterval } = calculateNextSequence(
             quality,
@@ -63,7 +57,10 @@ export async function POST(req: Request) {
         );
 
         // 6. Calculate next review date (UTC)
-        const nextReviewDate = new Date(Date.now() + newInterval * 24 * 60 * 60 * 1000);
+        // interval=0 means "due right now", positive values are days into the future
+        const nextReviewDate = newInterval <= 0
+            ? new Date()  // Due immediately
+            : new Date(Date.now() + newInterval * 24 * 60 * 60 * 1000);
 
         // 7. Update atomically
         // @ts-ignore

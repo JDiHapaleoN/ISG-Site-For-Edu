@@ -8,25 +8,39 @@ export function calculateNextSequence(
     let newInterval = interval; // in days
     let newEasiness = easiness;
 
+    // quality 0 = Reset to "due now" (interval=0 means nextReview = now)
     if (quality === 0) {
         newRepetitions = 0;
-        newInterval = -1; // Instantly due
+        newInterval = 0;
         newEasiness = 1.3;
         return { newRepetitions, newEasiness, newInterval };
     }
 
+    // quality 1 = Again → 1 minute
     if (quality === 1) {
         newRepetitions = 0;
-        newInterval = 1 / (24 * 60); // 1 min (Again)
-    } else if (quality === 2 || quality === 3) {
+        newInterval = 1 / (24 * 60); // 1 min
+    }
+    // quality 2-3 = Hard → 5 minutes
+    else if (quality === 2 || quality === 3) {
         newRepetitions = 0;
-        newInterval = 5 / (24 * 60); // 5 min (Hard)
-    } else if (quality === 4) {
-        newRepetitions = 1;
-        newInterval = 30 / (24 * 60); // 30 min (Good)
-    } else if (quality >= 5) {
-        newRepetitions = 1;
-        newInterval = 12 / 24; // 12 hours (Easy)
+        newInterval = 5 / (24 * 60); // 5 min
+    }
+    // quality 4 = Good → 10 minutes
+    else if (quality === 4) {
+        newRepetitions = repetitions + 1;
+        newInterval = 10 / (24 * 60); // 10 min
+    }
+    // quality 5 = Easy → graduated SM-2 intervals
+    else if (quality >= 5) {
+        newRepetitions = repetitions + 1;
+        if (newRepetitions <= 1) {
+            newInterval = 1; // 1 day
+        } else if (newRepetitions === 2) {
+            newInterval = 3; // 3 days
+        } else {
+            newInterval = Math.round(interval * easiness);
+        }
     }
 
     newEasiness = easiness + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
@@ -49,7 +63,7 @@ function pluralizeRu(n: number, forms: [string, string, string]) {
 }
 
 export function formatIntervalUI(days: number): string {
-    if (days < 0) return "Сейчас";
+    if (days <= 0) return "Сейчас";
 
     const mins = Math.floor(days * 24 * 60);
     if (mins < 60) {
