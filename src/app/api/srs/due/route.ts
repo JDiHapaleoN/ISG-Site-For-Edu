@@ -3,7 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { ensurePrismaUser } from "@/lib/auth-sync";
 import { srsDueModuleSchema } from "@/lib/validations";
-import { getCachedDeckMetadata, setCachedDeckMetadata } from "@/lib/redis";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -32,16 +31,10 @@ export async function GET(req: Request) {
     }
 
     try {
-        // 1. Check cache first
-        const cached = await getCachedDeckMetadata(user.id, module);
-        if (cached) {
-            console.info(`[SRS Due] Cache hit for ${user.id}:${module}`);
-            return NextResponse.json(cached);
-        }
-
         const now = new Date();
         const dbModel = module === 'german' ? prisma.germanWord : prisma.englishWord;
 
+        // Fetch ALL due words. Removed previous Redis caching and 'take: 50' limit.
         // @ts-ignore - Dynamic model access
         const dueWords = await dbModel.findMany({
             where: {
@@ -49,11 +42,8 @@ export async function GET(req: Request) {
                 nextReview: { lte: now },
             },
             orderBy: { nextReview: 'asc' },
-            take: 50,
+            take: 2000, // Safe high limit instead of 50 or 10.
         });
-
-        // 2. Store in cache
-        await setCachedDeckMetadata(user.id, module, dueWords);
 
         return NextResponse.json(dueWords);
     } catch (error) {
