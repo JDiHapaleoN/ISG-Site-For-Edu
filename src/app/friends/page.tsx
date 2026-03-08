@@ -18,6 +18,12 @@ interface Friendship {
     isSender: boolean;
     createdAt: string;
     friend: FriendData;
+    lastMessage?: {
+        content: string;
+        createdAt: string;
+        isMe: boolean;
+    } | null;
+    unreadCount?: number;
 }
 
 export default function FriendsPage() {
@@ -34,10 +40,7 @@ export default function FriendsPage() {
 
     const fetchMyProfile = async () => {
         try {
-            const res = await fetch("/api/auth/session"); // Or create a specific profile fetch
-            // Hack to quickly grab my code from dashboard API or session if available
-            // Note: In real app, we'd fetch the user's friend code from a direct api.
-            // Let's implement an inline fetch to our db for user.
+            const res = await fetch("/api/auth/session");
             const userRes = await fetch("/api/user/profile");
             if (userRes.ok) {
                 const data = await userRes.json();
@@ -116,6 +119,29 @@ export default function FriendsPage() {
         } finally {
             setIsSubmitting(false);
         }
+    };
+
+    const formatLastMessagePreview = (msg: Friendship['lastMessage']) => {
+        if (!msg) return null;
+        let text = msg.content;
+        if (text.startsWith('[VOICE]')) text = '🎤 Голосовое сообщение';
+        else if (text.startsWith('[IMAGE]')) text = '📷 Фото';
+        else if (text.startsWith('[VIDEO]')) text = '🎬 Видео';
+        else if (text.length > 35) text = text.slice(0, 35) + '…';
+
+        return msg.isMe ? `Вы: ${text}` : text;
+    };
+
+    const formatTime = (dateStr: string) => {
+        const date = new Date(dateStr);
+        const now = new Date();
+        const diff = now.getTime() - date.getTime();
+        const days = Math.floor(diff / 86400000);
+
+        if (days === 0) return date.toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" });
+        if (days === 1) return "Вчера";
+        if (days < 7) return date.toLocaleDateString("ru", { weekday: "short" });
+        return date.toLocaleDateString("ru", { day: "numeric", month: "short" });
     };
 
     const pendingRequests = friendships.filter(f => f.status === 'pending' && !f.isSender);
@@ -216,7 +242,7 @@ export default function FriendsPage() {
                             </div>
                         )}
 
-                        {/* Active Friends */}
+                        {/* Active Friends - now with chat previews */}
                         <div className="space-y-6">
                             <h2 className="text-xl font-black text-zinc-400 uppercase tracking-widest">
                                 Мои Друзья ({activeFriends.length})
@@ -226,33 +252,50 @@ export default function FriendsPage() {
                                     Пока пусто. Отправьте свой код друзьям или добавьте их!
                                 </div>
                             ) : (
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                <div className="flex flex-col gap-3">
                                     {activeFriends.map(f => (
-                                        <div key={f.id} className="group bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[2.5rem] p-6 text-center hover:border-indigo-500 hover:shadow-xl transition-all flex flex-col items-center gap-4">
-                                            <Link href={`/profile/${f.friend.id}`} className="block relative w-20 h-20 bg-indigo-50 dark:bg-indigo-900/20 rounded-full flex items-center justify-center text-3xl font-bold shadow-md hover:scale-105 transition-transform">
-                                                {f.friend.avatarUrl ? <img src={f.friend.avatarUrl} className="w-full h-full rounded-full object-cover" /> : f.friend.name?.[0] || "?"}
-                                            </Link>
-
-                                            <div>
-                                                <Link href={`/profile/${f.friend.id}`} className="font-bold text-lg hover:text-indigo-500 transition-colors block truncate max-w-[150px]">
-                                                    {f.friend.name || "Исследователь"}
-                                                </Link>
-                                                <p className="text-xs text-zinc-500 font-mono mt-1">Код: {f.friend.friendCode}</p>
+                                        <Link
+                                            key={f.id}
+                                            href={`/chat/${f.friend.id}`}
+                                            className="group bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[2rem] p-5 hover:border-indigo-400 dark:hover:border-indigo-700 hover:shadow-lg transition-all flex items-center gap-4"
+                                        >
+                                            {/* Avatar */}
+                                            <div className="relative w-14 h-14 bg-indigo-50 dark:bg-indigo-900/20 rounded-full flex items-center justify-center text-xl font-bold shrink-0 overflow-hidden">
+                                                {f.friend.avatarUrl ? <img src={f.friend.avatarUrl} className="w-full h-full object-cover" /> : f.friend.name?.[0] || "?"}
+                                                {/* Unread badge */}
+                                                {(f.unreadCount || 0) > 0 && (
+                                                    <div className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-indigo-500 rounded-full flex items-center justify-center text-[10px] font-black text-white shadow-sm">
+                                                        {f.unreadCount! > 9 ? '9+' : f.unreadCount}
+                                                    </div>
+                                                )}
                                             </div>
 
-                                            <Link
-                                                href={`/chat/${f.friend.id}`}
-                                                className="w-full mt-2 py-3 bg-zinc-100 dark:bg-zinc-800/80 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-2xl text-sm font-bold flex items-center justify-center gap-2 transition-colors border border-zinc-200 dark:border-zinc-700"
-                                            >
-                                                <MessageCircle className="w-4 h-4 text-indigo-500" /> Написать
-                                            </Link>
-                                        </div>
+                                            {/* Name + Preview */}
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <p className="font-bold text-lg text-zinc-900 dark:text-zinc-100 truncate group-hover:text-indigo-500 transition-colors">
+                                                        {f.friend.name || "Исследователь"}
+                                                    </p>
+                                                    {f.lastMessage && (
+                                                        <span className="text-[11px] text-zinc-400 font-medium shrink-0">
+                                                            {formatTime(f.lastMessage.createdAt)}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <p className={`text-sm truncate mt-0.5 ${(f.unreadCount || 0) > 0 ? 'text-zinc-700 dark:text-zinc-300 font-semibold' : 'text-zinc-500'}`}>
+                                                    {f.lastMessage ? formatLastMessagePreview(f.lastMessage) : "Нет сообщений"}
+                                                </p>
+                                            </div>
+
+                                            {/* Chat icon */}
+                                            <MessageCircle className="w-5 h-5 text-zinc-300 dark:text-zinc-600 group-hover:text-indigo-400 transition-colors shrink-0" />
+                                        </Link>
                                     ))}
                                 </div>
                             )}
                         </div>
 
-                        {/* Sent Requests Outbox Details (Small/Hidden) */}
+                        {/* Sent Requests */}
                         {sentRequests.length > 0 && (
                             <div className="pt-8 text-center text-sm font-medium text-zinc-500">
                                 У вас {sentRequests.length} исходящих заявок в друзья.

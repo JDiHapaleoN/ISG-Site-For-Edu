@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { ensurePrismaUser } from "@/lib/auth-sync";
 
-// GET: Fetch all friend relations (accepted and pending requests)
+// GET: Fetch all friend relations (accepted and pending requests) with chat metadata
 export async function GET() {
     try {
         const supabase = createClient();
@@ -29,17 +29,65 @@ export async function GET() {
             orderBy: { createdAt: 'desc' }
         });
 
-        // Map them to friend perspectives
-        const friends = friendships.map(f => {
+        // Build enriched friend list with chat metadata
+        const friends = await Promise.all(friendships.map(async (f) => {
             const isSender = f.user1Id === user.id;
             const friendProfile = isSender ? f.user2 : f.user1;
+            const friendUserId = friendProfile.id;
+
+            let lastMessage = null;
+            let unreadCount = 0;
+
+            if (f.status === 'accepted') {
+                // Get the last message between us
+                const lastMsg = await prisma.message.findFirst({
+                    where: {
+                        OR: [
+                            { senderId: user.id, receiverId: friendUserId },
+                            { senderId: friendUserId, receiverId: user.id }
+                        ]
+                    },
+                    orderBy: { createdAt: 'desc' },
+                    select: { content: true, createdAt: true, senderId: true }
+                });
+
+                if (lastMsg) {
+                    lastMessage = {
+                        content: lastMsg.content,
+                        createdAt: lastMsg.createdAt,
+                        isMe: lastMsg.senderId === user.id,
+                    };
+                }
+
+                // Count unread messages from this friend
+                unreadCount = await prisma.message.count({
+                    where: {
+                        senderId: friendUserId,
+                        receiverId: user.id,
+                        read: false,
+                    }
+                });
+            }
+
             return {
                 id: f.id,
                 status: f.status,
                 isSender,
                 createdAt: f.createdAt,
-                friend: friendProfile
+                friend: friendProfile,
+                lastMessage,
+                unreadCount,
             };
+        }));
+
+        // Sort accepted friends by last message time (most recent first)
+        friends.sort((a, b) => {
+            if (a.status !== 'accepted' && b.status !== 'accepted') return 0;
+            if (a.status !== 'accepted') return 1;
+            if (b.status !== 'accepted') return -1;
+            const aTime = a.lastMessage?.createdAt ? new Date(a.lastMessage.createdAt).getTime() : 0;
+            const bTime = b.lastMessage?.createdAt ? new Date(b.lastMessage.createdAt).getTime() : 0;
+            return bTime - aTime;
         });
 
         return NextResponse.json(friends);

@@ -1,14 +1,12 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import useSWR from "swr";
-import { Send, ArrowLeft, Loader2, Check, Share2, Mic, Paperclip } from "lucide-react";
+import { Send, ArrowLeft, Loader2, Check, Mic, Paperclip, ChevronDown, Copy, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 
-// Fast polling interval (3 seconds) for real-time feel without websockets
-// Fast polling interval for real-time feel
-const POLL_INTERVAL = 1000;
+const POLL_INTERVAL = 3000; // Fallback polling interval
 
 interface Message {
     id: string;
@@ -39,26 +37,29 @@ export default function ChatPage({ params }: { params: { friendId: string } }) {
     const [isRecording, setIsRecording] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [myId, setMyId] = useState<string | null>(null);
+    const [showScrollBtn, setShowScrollBtn] = useState(false);
+    const [contextMenu, setContextMenu] = useState<{ msgId: string; x: number; y: number; isMe: boolean; content: string } | null>(null);
 
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<BlobPart[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const typingChannelRef = useRef<any>(null);
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     const supabase = createClient();
 
-    // Fetch My ID on load to establish Realtime channel
+    // Fetch My ID on load
     useEffect(() => {
         supabase.auth.getUser().then(({ data: { user } }) => {
             if (user) setMyId(user.id);
         });
     }, [supabase.auth]);
 
-    // Supabase Realtime Presence for Typing Indicator
+    // Supabase Realtime Presence for Typing Indicator (single channel instance)
     useEffect(() => {
         if (!myId || !friendId) return;
 
-        // Create a unique deterministic room name for these two users
         const roomName = `chat_${[myId, friendId].sort().join('-')}`;
         const channel = supabase.channel(roomName, {
             config: { presence: { key: myId } },
@@ -67,7 +68,6 @@ export default function ChatPage({ params }: { params: { friendId: string } }) {
         channel
             .on('presence', { event: 'sync' }, () => {
                 const state = channel.presenceState();
-                // Check if the friend is currently typing
                 const friendPresence = state[friendId] as any[];
                 if (friendPresence && friendPresence.length > 0) {
                     setIsTyping(friendPresence[0].typing === true);
@@ -77,32 +77,40 @@ export default function ChatPage({ params }: { params: { friendId: string } }) {
             })
             .subscribe(async (status) => {
                 if (status === 'SUBSCRIBED') {
-                    // Track initial state
                     await channel.track({ typing: false });
                 }
             });
 
+        typingChannelRef.current = channel;
+
         return () => {
             supabase.removeChannel(channel);
+            typingChannelRef.current = null;
         };
     }, [myId, friendId, supabase]);
 
-    // Handle input change to broadcast typing status
+    // Handle input change to broadcast typing status via existing channel ref
     const handleInputChange = (val: string) => {
         setNewMessage(val);
+        autoResizeTextarea();
 
-        if (!myId || !friendId) return;
-        const roomName = `chat_${[myId, friendId].sort().join('-')}`;
-        const channel = supabase.channel(roomName);
+        if (!typingChannelRef.current) return;
 
-        // Broadcast typing
-        channel.track({ typing: true });
+        typingChannelRef.current.track({ typing: true });
 
-        // Auto-stop typing after 2 seconds
         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
         typingTimeoutRef.current = setTimeout(() => {
-            channel.track({ typing: false });
+            typingChannelRef.current?.track({ typing: false });
         }, 2000);
+    };
+
+    // Auto-resize textarea
+    const autoResizeTextarea = () => {
+        const ta = textareaRef.current;
+        if (ta) {
+            ta.style.height = 'auto';
+            ta.style.height = Math.min(ta.scrollHeight, 150) + 'px';
+        }
     };
 
     const { data: messages, error, mutate } = useSWR<Message[]>(
@@ -113,11 +121,75 @@ export default function ChatPage({ params }: { params: { friendId: string } }) {
 
     const { data: friendData } = useSWR(`/api/user/profile?id=${friendId}`, fetcher);
 
+    // Supabase Realtime: listen to new messages for instant delivery
+    useEffect(() => {
+        if (!myId || !friendId) return;
+
+        const channel = supabase
+            .channel(`chat_messages_${[myId, friendId].sort().join('-')}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'Message',
+                    filter: `receiverId=eq.${myId}`,
+                },
+                () => {
+                    // Revalidate SWR data when a new message arrives
+                    mutate();
+                }
+            )
+            .on(
+                'postgres_changes',
+                {
+                    event: 'DELETE',
+                    schema: 'public',
+                    table: 'Message',
+                },
+                () => {
+                    mutate();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [myId, friendId, supabase, mutate]);
+
+    // Scroll to bottom on new messages
     useEffect(() => {
         if (scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+            const el = scrollRef.current;
+            const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 150;
+            if (isNearBottom) {
+                el.scrollTop = el.scrollHeight;
+            }
         }
     }, [messages, isTyping]);
+
+    // Track scroll position to show/hide scroll-to-bottom button
+    const handleScroll = useCallback(() => {
+        if (scrollRef.current) {
+            const el = scrollRef.current;
+            const fromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+            setShowScrollBtn(fromBottom > 300);
+        }
+    }, []);
+
+    const scrollToBottom = () => {
+        if (scrollRef.current) {
+            scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+        }
+    };
+
+    // Initial scroll to bottom
+    useEffect(() => {
+        if (messages && scrollRef.current) {
+            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
+    }, [messages?.length ? 'loaded' : 'empty']);
 
     const handleSend = async (e?: any, contentOverride?: string) => {
         if (e && e.preventDefault) e.preventDefault();
@@ -131,21 +203,25 @@ export default function ChatPage({ params }: { params: { friendId: string } }) {
 
         // Clear typing indicator instantly
         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-        if (myId) {
-            const roomName = `chat_${[myId, friendId].sort().join('-')}`;
-            supabase.channel(roomName).track({ typing: false });
-        }
+        typingChannelRef.current?.track({ typing: false });
 
         const optimisticMsg = {
             id: `temp-${Date.now()}`,
             senderId: myId || "me",
             content: contentToSend,
             createdAt: new Date().toISOString(),
-            sender: { id: myId || "me", name: "I", avatarUrl: null }
+            sender: { id: myId || "me", name: "I", avatarUrl: null },
+            read: false,
         };
 
         const currentMessages = messages || [];
-        if (!contentOverride) setNewMessage("");
+        if (!contentOverride) {
+            setNewMessage("");
+            // Reset textarea height
+            if (textareaRef.current) {
+                textareaRef.current.style.height = 'auto';
+            }
+        }
 
         try {
             await mutate(
@@ -157,19 +233,20 @@ export default function ChatPage({ params }: { params: { friendId: string } }) {
                     });
                     if (!res.ok) throw new Error("Failed to send");
 
-                    // Trigger a re-fetch to get the real message from DB
                     const fresh = await fetch(`/api/chat?friendId=${friendId}`).then(r => r.json());
                     return fresh;
                 },
                 {
                     optimisticData: [...currentMessages, optimisticMsg as unknown as Message],
                     rollbackOnError: true,
-                    revalidate: false // We already revalidate in the async function
+                    revalidate: false
                 }
             );
+            // Scroll to bottom after sending
+            setTimeout(scrollToBottom, 100);
         } catch (error) {
             toast.error("Сообщение не отправлено");
-            if (!contentOverride) setNewMessage(optimisticMsg.content); // Restore
+            if (!contentOverride) setNewMessage(optimisticMsg.content);
         } finally {
             if (!contentOverride) setIsSending(false);
         }
@@ -182,15 +259,66 @@ export default function ChatPage({ params }: { params: { friendId: string } }) {
         }
     };
 
+    // Delete message
+    const handleDeleteMessage = async (messageId: string) => {
+        setContextMenu(null);
+        const prevMessages = messages || [];
+        // Optimistic delete
+        mutate(prevMessages.filter(m => m.id !== messageId), false);
+
+        try {
+            const res = await fetch(`/api/chat?id=${messageId}`, { method: 'DELETE' });
+            if (!res.ok) throw new Error("Failed to delete");
+            mutate();
+        } catch (error) {
+            toast.error("Не удалось удалить сообщение");
+            mutate(prevMessages, false);
+        }
+    };
+
+    // Copy message text
+    const handleCopyMessage = (content: string) => {
+        setContextMenu(null);
+        // Strip media prefixes
+        let text = content;
+        if (text.startsWith('[VOICE]') || text.startsWith('[IMAGE]') || text.startsWith('[VIDEO]')) {
+            text = text.replace(/^\[(VOICE|IMAGE|VIDEO)\]/, '');
+        }
+        navigator.clipboard.writeText(text);
+        toast.success("Скопировано");
+    };
+
+    // Context menu for messages
+    const handleContextMenu = (e: React.MouseEvent | React.TouchEvent, msg: Message) => {
+        e.preventDefault();
+        const isMe = msg.senderId !== friendId;
+        let x: number, y: number;
+        if ('touches' in e) {
+            x = e.touches[0].clientX;
+            y = e.touches[0].clientY;
+        } else {
+            x = e.clientX;
+            y = e.clientY;
+        }
+        setContextMenu({ msgId: msg.id, x, y, isMe, content: msg.content });
+    };
+
+    // Close context menu on click outside
+    useEffect(() => {
+        const handler = () => setContextMenu(null);
+        if (contextMenu) {
+            document.addEventListener('click', handler);
+            return () => document.removeEventListener('click', handler);
+        }
+    }, [contextMenu]);
+
     const uploadAndSendMedia = async (fileOrBlob: Blob | File, filename: string, type: 'audio' | 'image' | 'video') => {
         if (!myId) return;
         setIsUploading(true);
         try {
             const ext = filename.split('.').pop() || 'tmp';
-            // Start path with myId to satisfy typical Supabase RLS policies
             const path = `${myId}/chat_${Date.now()}.${ext}`;
 
-            // Reusing existing public avatars bucket
             const { data, error } = await supabase.storage
                 .from('avatars')
                 .upload(path, fileOrBlob, {
@@ -205,7 +333,6 @@ export default function ChatPage({ params }: { params: { friendId: string } }) {
                 .getPublicUrl(data.path);
 
             let specialContent = `[${type.toUpperCase()}]${publicUrl}`;
-
             await handleSend(undefined, specialContent);
         } catch (error: any) {
             console.error("Media upload error:", error);
@@ -237,11 +364,10 @@ export default function ChatPage({ params }: { params: { friendId: string } }) {
             setIsRecording(true);
         } catch (err: any) {
             console.error("Error accessing microphone:", err);
-            // Better error reporting for insecure contexts like HTTP on mobile devices
             if (err.name === 'NotAllowedError' || err.name === 'SecurityError') {
                 toast.error("Нет доступа к микрофону. Разрешите доступ в браузере.");
             } else {
-                toast.error("Ошибка микрофона. Убедитесь, что записываете через HTTPS или Localhost.");
+                toast.error("Ошибка микрофона. Убедитесь, что записываете через HTTPS.");
             }
         }
     };
@@ -273,6 +399,23 @@ export default function ChatPage({ params }: { params: { friendId: string } }) {
         uploadAndSendMedia(file, file.name, isImage ? 'image' : 'video');
     };
 
+    // Parse links in text
+    const renderTextWithLinks = (text: string) => {
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        const parts = text.split(urlRegex);
+        return parts.map((part, idx) => {
+            if (urlRegex.test(part)) {
+                return (
+                    <a key={idx} href={part} target="_blank" rel="noopener noreferrer"
+                        className="underline underline-offset-2 hover:opacity-80 transition-opacity break-all">
+                        {part.length > 40 ? part.slice(0, 40) + '…' : part}
+                    </a>
+                );
+            }
+            return part;
+        });
+    };
+
     const renderMessageContent = (content: string) => {
         if (content.startsWith('[VOICE]')) {
             const url = content.replace('[VOICE]', '');
@@ -300,7 +443,27 @@ export default function ChatPage({ params }: { params: { friendId: string } }) {
                 </div>
             );
         }
-        return <p className="whitespace-pre-wrap break-words pr-12">{content}</p>;
+        return <p className="whitespace-pre-wrap break-words pr-12">{renderTextWithLinks(content)}</p>;
+    };
+
+    // Date separator logic
+    const getDateLabel = (dateStr: string) => {
+        const date = new Date(dateStr);
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const yesterday = new Date(today.getTime() - 86400000);
+        const msgDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+        if (msgDate.getTime() === today.getTime()) return "Сегодня";
+        if (msgDate.getTime() === yesterday.getTime()) return "Вчера";
+        return date.toLocaleDateString("ru", { day: "numeric", month: "long" });
+    };
+
+    const shouldShowDateSeparator = (messages: Message[], idx: number) => {
+        if (idx === 0) return true;
+        const prev = new Date(messages[idx - 1].createdAt);
+        const curr = new Date(messages[idx].createdAt);
+        return prev.toDateString() !== curr.toDateString();
     };
 
     if (error) {
@@ -334,10 +497,6 @@ export default function ChatPage({ params }: { params: { friendId: string } }) {
                                     <div className="h-4">
                                         {isTyping ? (
                                             <span className="text-xs text-indigo-500 font-medium animate-pulse transition-opacity">печатает...</span>
-                                        ) : friendData?.activeReaderText ? (
-                                            <span className="text-xs text-zinc-500 font-medium truncate max-w-[150px] inline-block">
-                                                📖 {friendData.activeReaderText}
-                                            </span>
                                         ) : (
                                             <span className="text-xs text-zinc-400 font-medium">в сети</span>
                                         )}
@@ -356,7 +515,8 @@ export default function ChatPage({ params }: { params: { friendId: string } }) {
                 {/* Chat Messages */}
                 <div
                     ref={scrollRef}
-                    className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 flex flex-col scroll-smooth md:bg-white md:dark:bg-zinc-900 md:border-x border-zinc-200 dark:border-zinc-800 relative"
+                    onScroll={handleScroll}
+                    className="flex-1 overflow-y-auto p-4 md:p-6 space-y-2 flex flex-col scroll-smooth md:bg-white md:dark:bg-zinc-900 md:border-x border-zinc-200 dark:border-zinc-800 relative"
                 >
                     {!messages && !error && (
                         <div className="absolute inset-0 flex items-center justify-center">
@@ -372,38 +532,53 @@ export default function ChatPage({ params }: { params: { friendId: string } }) {
                     )}
 
                     {messages?.map((msg, idx) => {
-                        const isMe = msg.senderId !== friendId; // Because I am the only other participant in a DM
-                        const showAvatar = !isMe && (idx === 0 || messages[idx - 1].senderId === friendId);
+                        const isMe = msg.senderId !== friendId;
+                        const showDateSep = shouldShowDateSeparator(messages, idx);
 
                         return (
-                            <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} w-full group`}>
-                                {!isMe && (
-                                    <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center mr-2 shrink-0 overflow-hidden mt-auto mb-1">
-                                        {showAvatar ? (msg.sender.avatarUrl ? <img src={msg.sender.avatarUrl} className="w-full h-full object-cover" /> : msg.sender.name?.[0] || "?") : null}
+                            <div key={msg.id}>
+                                {/* Date Separator */}
+                                {showDateSep && (
+                                    <div className="flex items-center justify-center my-4">
+                                        <div className="px-4 py-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-full text-xs font-bold text-zinc-500 dark:text-zinc-400 shadow-sm">
+                                            {getDateLabel(msg.createdAt)}
+                                        </div>
                                     </div>
                                 )}
-                                <div className={`max-w-[85%] px-4 pt-3 pb-2 rounded-3xl relative text-[15px] shadow-sm leading-relaxed flex flex-col ${isMe
-                                    ? 'bg-indigo-500 text-white rounded-br-sm'
-                                    : 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-bl-sm border border-zinc-100 dark:border-zinc-700/50'
-                                    }`}>
-                                    {renderMessageContent(msg.content)}
-                                    <div className={`flex items-center gap-1 self-end translate-y-1 -mt-2 -mr-1 ${isMe ? 'text-indigo-200' : 'text-zinc-400'}`}>
-                                        <span className="text-[10px] font-medium opacity-80">
-                                            {new Date(msg.createdAt).toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" })}
-                                        </span>
-                                        {isMe && (
-                                            <div className="flex -space-x-1.5 translate-y-[1px]">
-                                                <Check className={`w-3 h-3 ${msg.read ? 'text-indigo-200 opacity-100' : 'opacity-60'}`} />
-                                                {msg.read && <Check className="w-3 h-3 text-indigo-200 opacity-100 -ml-1.5" />}
-                                            </div>
-                                        )}
+
+                                {/* Message Bubble */}
+                                <div
+                                    className={`flex ${isMe ? 'justify-end' : 'justify-start'} w-full group mb-1`}
+                                    onContextMenu={(e) => handleContextMenu(e, msg)}
+                                >
+                                    {!isMe && (
+                                        <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center mr-2 shrink-0 overflow-hidden mt-auto mb-1">
+                                            {msg.sender.avatarUrl ? <img src={msg.sender.avatarUrl} className="w-full h-full object-cover" /> : msg.sender.name?.[0] || "?"}
+                                        </div>
+                                    )}
+                                    <div className={`max-w-[85%] px-4 pt-3 pb-2 rounded-3xl relative text-[15px] shadow-sm leading-relaxed flex flex-col ${isMe
+                                        ? 'bg-indigo-500 text-white rounded-br-sm'
+                                        : 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-bl-sm border border-zinc-100 dark:border-zinc-700/50'
+                                        }`}>
+                                        {renderMessageContent(msg.content)}
+                                        <div className={`flex items-center gap-1 self-end translate-y-1 -mt-2 -mr-1 ${isMe ? 'text-indigo-200' : 'text-zinc-400'}`}>
+                                            <span className="text-[10px] font-medium opacity-80">
+                                                {new Date(msg.createdAt).toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" })}
+                                            </span>
+                                            {isMe && (
+                                                <div className="flex -space-x-1.5 translate-y-[1px]">
+                                                    <Check className={`w-3 h-3 ${msg.read ? 'text-indigo-200 opacity-100' : 'opacity-60'}`} />
+                                                    {msg.read && <Check className="w-3 h-3 text-indigo-200 opacity-100 -ml-1.5" />}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         );
                     })}
 
-                    {/* Visual spacer for typing indicator at the bottom of messages list */}
+                    {/* Typing Indicator */}
                     {isTyping && (
                         <div className="flex justify-start w-full transition-all">
                             <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/50 mx-2 shrink-0 animate-pulse" />
@@ -415,6 +590,43 @@ export default function ChatPage({ params }: { params: { friendId: string } }) {
                         </div>
                     )}
                 </div>
+
+                {/* Scroll to bottom button */}
+                {showScrollBtn && (
+                    <button
+                        onClick={scrollToBottom}
+                        className="absolute bottom-28 md:bottom-32 right-6 md:right-8 z-20 w-10 h-10 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-full shadow-lg flex items-center justify-center text-zinc-500 hover:text-indigo-500 hover:border-indigo-300 transition-all"
+                    >
+                        <ChevronDown className="w-5 h-5" />
+                    </button>
+                )}
+
+                {/* Context Menu */}
+                {contextMenu && (
+                    <div
+                        className="fixed z-[100] bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl shadow-2xl py-2 min-w-[160px] overflow-hidden"
+                        style={{
+                            left: Math.min(contextMenu.x, window.innerWidth - 180),
+                            top: Math.min(contextMenu.y, window.innerHeight - 120),
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <button
+                            onClick={() => handleCopyMessage(contextMenu.content)}
+                            className="w-full px-4 py-3 text-left text-sm font-medium hover:bg-zinc-50 dark:hover:bg-zinc-700 flex items-center gap-3 transition-colors"
+                        >
+                            <Copy className="w-4 h-4 text-zinc-400" /> Копировать
+                        </button>
+                        {contextMenu.isMe && (
+                            <button
+                                onClick={() => handleDeleteMessage(contextMenu.msgId)}
+                                className="w-full px-4 py-3 text-left text-sm font-medium text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 flex items-center gap-3 transition-colors"
+                            >
+                                <Trash2 className="w-4 h-4" /> Удалить
+                            </button>
+                        )}
+                    </div>
+                )}
 
                 {/* Chat Input Area */}
                 <form
@@ -447,13 +659,13 @@ export default function ChatPage({ params }: { params: { friendId: string } }) {
                                 </div>
                             ) : (
                                 <textarea
+                                    ref={textareaRef}
                                     value={newMessage}
                                     onChange={(e) => handleInputChange(e.target.value)}
                                     onKeyDown={handleKeyDown}
                                     placeholder="Написать сообщение..."
                                     className="w-full bg-transparent min-h-[56px] max-h-[150px] resize-none py-4 px-6 pr-14 outline-none text-zinc-900 dark:text-zinc-100 rounded-[2rem]"
                                     rows={1}
-                                    style={{ height: newMessage.split('\n').length * 24 + 32 + 'px' }}
                                 />
                             )}
                             {!isRecording && (

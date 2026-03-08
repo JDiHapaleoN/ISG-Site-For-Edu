@@ -36,7 +36,7 @@ export async function GET(req: Request) {
             return NextResponse.json({ error: "Вы не можете читать эти сообщения" }, { status: 403 });
         }
 
-        // Fetch recent 50 messages
+        // Fetch last 200 messages
         const messages = await prisma.message.findMany({
             where: {
                 OR: [
@@ -48,7 +48,7 @@ export async function GET(req: Request) {
                 sender: { select: { id: true, name: true, avatarUrl: true } }
             },
             orderBy: { createdAt: 'desc' },
-            take: 50
+            take: 200
         });
 
         // Prisma returns latest first because of desc order. Reverse it for chat UI.
@@ -60,7 +60,6 @@ export async function GET(req: Request) {
             .map(m => m.id);
 
         if (unreadIds.length > 0) {
-            // Don't await on purpose to speed up reads
             prisma.message.updateMany({
                 where: { id: { in: unreadIds } },
                 data: { read: true }
@@ -92,7 +91,6 @@ export async function POST(req: Request) {
         const user = await ensurePrismaUser(supabaseUser);
         if (!user) return NextResponse.json({ error: "User sync failed" }, { status: 500 });
 
-        // Verification that they are friends
         const friendship = await prisma.friendship.findFirst({
             where: {
                 status: 'accepted',
@@ -122,6 +120,49 @@ export async function POST(req: Request) {
 
     } catch (error) {
         console.error("API POST chat error:", error);
+        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    }
+}
+
+// DELETE: Delete own message
+export async function DELETE(req: Request) {
+    try {
+        const { searchParams } = new URL(req.url);
+        const messageId = searchParams.get('id');
+
+        if (!messageId) {
+            return NextResponse.json({ error: "Необходим ID сообщения" }, { status: 400 });
+        }
+
+        const supabase = createClient();
+        const { data: { user: supabaseUser } } = await supabase.auth.getUser();
+
+        if (!supabaseUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+        const user = await ensurePrismaUser(supabaseUser);
+        if (!user) return NextResponse.json({ error: "User sync failed" }, { status: 500 });
+
+        // Only allow deleting own messages
+        const message = await prisma.message.findUnique({
+            where: { id: messageId }
+        });
+
+        if (!message) {
+            return NextResponse.json({ error: "Сообщение не найдено" }, { status: 404 });
+        }
+
+        if (message.senderId !== user.id) {
+            return NextResponse.json({ error: "Вы можете удалять только свои сообщения" }, { status: 403 });
+        }
+
+        await prisma.message.delete({
+            where: { id: messageId }
+        });
+
+        return NextResponse.json({ success: true });
+
+    } catch (error) {
+        console.error("API DELETE chat error:", error);
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }
