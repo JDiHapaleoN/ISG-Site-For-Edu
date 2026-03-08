@@ -274,45 +274,37 @@ export default function SrsReview({ module }: SrsReviewProps) {
                   onClick={() => handleReview(1)}
                   disabled={isSubmitting}
                   className="flex flex-col items-center gap-0.5 md:gap-1 p-2 md:p-3 rounded-xl md:rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/30 dark:hover:bg-rose-900/50 dark:text-rose-400 transition-colors"
-                  title="Забыл полностью (1)"
+                  title="Забыл полностью"
                 >
                   <span className="font-bold text-sm sm:text-base md:text-lg">Снова</span>
-                  <span className="text-[9px] md:text-[10px] opacity-70">
-                    {formatIntervalUI(calculateNextSequence(1, card.srsStep, card.easiness, card.interval).newInterval)}
-                  </span>
+                  <span className="text-[9px] md:text-[10px] opacity-70">1 мин</span>
                 </button>
                 <button
                   onClick={() => handleReview(3)}
                   disabled={isSubmitting}
                   className="flex flex-col items-center gap-0.5 md:gap-1 p-2 md:p-3 rounded-xl md:rounded-2xl bg-amber-50 hover:bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:hover:bg-amber-900/50 dark:text-amber-400 transition-colors"
-                  title="Трудно вспомнить (3)"
+                  title="Трудно вспомнить"
                 >
                   <span className="font-bold text-sm sm:text-base md:text-lg">Сложно</span>
-                  <span className="text-[9px] md:text-[10px] opacity-70">
-                    {formatIntervalUI(calculateNextSequence(3, card.srsStep, card.easiness, card.interval).newInterval)}
-                  </span>
+                  <span className="text-[9px] md:text-[10px] opacity-70">5 мин</span>
                 </button>
                 <button
                   onClick={() => handleReview(4)}
                   disabled={isSubmitting}
                   className="flex flex-col items-center gap-0.5 md:gap-1 p-2 md:p-3 rounded-xl md:rounded-2xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:hover:bg-emerald-900/50 dark:text-emerald-400 transition-colors"
-                  title="Вспомнил с запинкой (4)"
+                  title="Вспомнил с запинкой"
                 >
                   <span className="font-bold text-sm sm:text-base md:text-lg">Хорошо</span>
-                  <span className="text-[9px] md:text-[10px] opacity-70">
-                    {formatIntervalUI(calculateNextSequence(4, card.srsStep, card.easiness, card.interval).newInterval)}
-                  </span>
+                  <span className="text-[9px] md:text-[10px] opacity-70">10 мин</span>
                 </button>
                 <button
                   onClick={() => handleReview(5)}
                   disabled={isSubmitting}
                   className="flex flex-col items-center gap-0.5 md:gap-1 p-2 md:p-3 rounded-xl md:rounded-2xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/30 dark:hover:bg-indigo-900/50 dark:text-indigo-400 transition-colors"
-                  title="Идеально (5)"
+                  title="Идеально"
                 >
                   <span className="font-bold text-sm sm:text-base md:text-lg">Легко</span>
-                  <span className="text-[9px] md:text-[10px] opacity-70">
-                    {formatIntervalUI(calculateNextSequence(5, card.srsStep, card.easiness, card.interval).newInterval)}
-                  </span>
+                  <span className="text-[9px] md:text-[10px] opacity-70">1 день</span>
                 </button>
               </div>
             </div>
