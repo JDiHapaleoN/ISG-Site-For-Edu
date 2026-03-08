@@ -286,7 +286,7 @@ export default function SrsReview({ module }: SrsReviewProps) {
                   title="Трудно вспомнить"
                 >
                   <span className="font-bold text-sm sm:text-base md:text-lg">Сложно</span>
-                  <span className="text-[9px] md:text-[10px] opacity-70">5 мин</span>
+                  <span className="text-[9px] md:text-[10px] opacity-70">10 мин</span>
                 </button>
                 <button
                   onClick={() => handleReview(4)}
@@ -295,7 +295,7 @@ export default function SrsReview({ module }: SrsReviewProps) {
                   title="Вспомнил с запинкой"
                 >
                   <span className="font-bold text-sm sm:text-base md:text-lg">Хорошо</span>
-                  <span className="text-[9px] md:text-[10px] opacity-70">10 мин</span>
+                  <span className="text-[9px] md:text-[10px] opacity-70">30 мин</span>
                 </button>
                 <button
                   onClick={() => handleReview(5)}
@@ -304,7 +304,7 @@ export default function SrsReview({ module }: SrsReviewProps) {
                   title="Идеально"
                 >
                   <span className="font-bold text-sm sm:text-base md:text-lg">Легко</span>
-                  <span className="text-[9px] md:text-[10px] opacity-70">1 день</span>
+                  <span className="text-[9px] md:text-[10px] opacity-70">12 часов</span>
                 </button>
               </div>
             </div>

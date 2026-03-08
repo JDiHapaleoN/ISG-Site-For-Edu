@@ -5,7 +5,7 @@ export function calculateNextSequence(
     interval: number
 ) {
     let newRepetitions = repetitions;
-    let newInterval = interval; // in days
+    let newInterval = interval;
     let newEasiness = easiness;
 
     // quality 0 = Reset to "due now"
@@ -16,27 +16,28 @@ export function calculateNextSequence(
         return { newRepetitions, newEasiness, newInterval };
     }
 
-    // FIXED intervals for every word, regardless of its state:
-    // quality 1 = Снова → 1 minute
+    // ===== FIXED INTERVALS (NEVER CHANGE) =====
+    // quality 1 = Снова → 1 минута
     if (quality === 1) {
         newRepetitions = 0;
         newInterval = 1 / (24 * 60); // 1 min
     }
-    // quality 2-3 = Сложно → 5 minutes
+    // quality 2-3 = Сложно → 10 минут
     else if (quality === 2 || quality === 3) {
         newRepetitions = 0;
-        newInterval = 5 / (24 * 60); // 5 min
-    }
-    // quality 4 = Хорошо → 10 minutes
-    else if (quality === 4) {
-        newRepetitions = repetitions + 1;
         newInterval = 10 / (24 * 60); // 10 min
     }
-    // quality 5 = Легко → always 1 day
+    // quality 4 = Хорошо → 30 минут
+    else if (quality === 4) {
+        newRepetitions = repetitions + 1;
+        newInterval = 30 / (24 * 60); // 30 min
+    }
+    // quality 5 = Легко → 12 часов
     else if (quality >= 5) {
         newRepetitions = repetitions + 1;
-        newInterval = 1; // always 1 day
+        newInterval = 12 / 24; // 12 hours = 0.5 days
     }
+    // ===== END FIXED INTERVALS =====
 
     newEasiness = easiness + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
     if (newEasiness < 1.3) newEasiness = 1.3;

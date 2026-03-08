@@ -361,7 +361,7 @@ export default function SrsDictionary({ module }: SrsDictionaryProps) {
                                             className="px-1 py-3 bg-rose-100 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400 rounded-xl flex flex-col items-center justify-center hover:bg-rose-200 dark:hover:bg-rose-900/50 transition-colors"
                                         >
                                             <span className="text-xs font-bold leading-none mb-1">Опять</span>
-                                            <span className="text-[10px] opacity-70 leading-none">{formatIntervalUI(calculateNextSequence(1, selectedWord.srsStep, selectedWord.easiness, selectedWord.interval).newInterval)}</span>
+                                            <span className="text-[10px] opacity-70 leading-none">1 мин</span>
                                         </button>
                                         <button
                                             disabled={isSubmitting}
@@ -369,7 +369,7 @@ export default function SrsDictionary({ module }: SrsDictionaryProps) {
                                             className="px-1 py-3 bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 rounded-xl flex flex-col items-center justify-center hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors"
                                         >
                                             <span className="text-xs font-bold leading-none mb-1">Трудно</span>
-                                            <span className="text-[10px] opacity-70 leading-none">{formatIntervalUI(calculateNextSequence(3, selectedWord.srsStep, selectedWord.easiness, selectedWord.interval).newInterval)}</span>
+                                            <span className="text-[10px] opacity-70 leading-none">10 мин</span>
                                         </button>
                                         <button
                                             disabled={isSubmitting}
@@ -377,7 +377,7 @@ export default function SrsDictionary({ module }: SrsDictionaryProps) {
                                             className="px-1 py-3 bg-emerald-100 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 rounded-xl flex flex-col items-center justify-center hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-colors"
                                         >
                                             <span className="text-xs font-bold leading-none mb-1">Хорошо</span>
-                                            <span className="text-[10px] opacity-70 leading-none">{formatIntervalUI(calculateNextSequence(4, selectedWord.srsStep, selectedWord.easiness, selectedWord.interval).newInterval)}</span>
+                                            <span className="text-[10px] opacity-70 leading-none">30 мин</span>
                                         </button>
                                         <button
                                             disabled={isSubmitting}
@@ -385,7 +385,7 @@ export default function SrsDictionary({ module }: SrsDictionaryProps) {
                                             className="px-1 py-3 bg-cyan-100 dark:bg-cyan-950/30 text-cyan-700 dark:text-cyan-400 rounded-xl flex flex-col items-center justify-center hover:bg-cyan-200 dark:hover:bg-cyan-900/50 transition-colors"
                                         >
                                             <span className="text-xs font-bold leading-none mb-1">Легко</span>
-                                            <span className="text-[10px] opacity-70 leading-none">{formatIntervalUI(calculateNextSequence(5, selectedWord.srsStep, selectedWord.easiness, selectedWord.interval).newInterval)}</span>
+                                            <span className="text-[10px] opacity-70 leading-none">12 часов</span>
                                         </button>
                                     </div>
                                     <div className="pt-2">
