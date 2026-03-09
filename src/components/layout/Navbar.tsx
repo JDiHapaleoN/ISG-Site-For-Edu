@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/client";
 import { User } from "@supabase/supabase-js";
 import { BRAND_NAME } from "@/lib/constants";
 import { motion, AnimatePresence } from "framer-motion";
+import BroadcastBanner from "./BroadcastBanner";
 
 const NAV_ITEMS = [
     { href: "/", label: "Главная", icon: Home },
@@ -47,7 +48,6 @@ export default function Navbar() {
         setIsMenuOpen(false);
     }, [pathname]);
 
-    // Block body scroll when mobile menu is open
     useEffect(() => {
         if (isMenuOpen) {
             document.body.style.overflow = "hidden";
@@ -65,9 +65,10 @@ export default function Navbar() {
     };
 
     return (
-        <>
+        <header className="fixed top-0 left-0 right-0 z-50 flex flex-col">
+            <BroadcastBanner />
             {/* ─── Top Navigation Bar ─── */}
-            <nav className="fixed top-0 left-0 right-0 py-3 sm:py-4 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-xl border-b border-zinc-200 dark:border-zinc-800 z-50 flex items-center justify-between px-3 sm:px-4 md:px-6"
+            <nav className="py-3 sm:py-4 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-xl border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between px-3 sm:px-4 md:px-6 w-full"
                 style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.75rem)" }}
             >
                 {/* Left: Logo + Desktop Nav */}
@@ -81,7 +82,7 @@ export default function Navbar() {
                         </span>
                     </Link>
 
-                    {/* Desktop Nav — scrollable on medium screens */}
+                    {/* Desktop Nav */}
                     <div className="hidden md:flex items-center gap-0.5 lg:gap-1 overflow-x-auto no-scrollbar flex-1 min-w-0">
                         {NAV_ITEMS.map((item) => {
                             const isActive = pathname === item.href;
@@ -136,7 +137,6 @@ export default function Navbar() {
                         <ThemeToggle />
                     </div>
 
-                    {/* Mobile: Theme + Burger */}
                     <div className="md:hidden">
                         <ThemeToggle />
                     </div>
@@ -149,11 +149,10 @@ export default function Navbar() {
                 </div>
             </nav>
 
-            {/* ─── Mobile Fullscreen Menu ─── */}
+            {/* Mobile Menu */}
             <AnimatePresence>
                 {isMenuOpen && (
                     <>
-                        {/* Backdrop */}
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
@@ -161,7 +160,6 @@ export default function Navbar() {
                             className="fixed inset-0 bg-black/20 z-40 md:hidden"
                             onClick={() => setIsMenuOpen(false)}
                         />
-                        {/* Panel */}
                         <motion.div
                             initial={{ opacity: 0, y: -20 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -229,6 +227,6 @@ export default function Navbar() {
                     </>
                 )}
             </AnimatePresence>
-        </>
+        </header>
     );
 }

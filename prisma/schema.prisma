@@ -45,6 +45,8 @@ model User {
   savedTexts      SavedText[]
   organizerTasks  OrganizerTask[]
   organizerHabits OrganizerHabit[]
+  englishWords    EnglishWord[]
+  germanWords     GermanWord[]
 }
 
 // ============================================
@@ -127,6 +129,7 @@ model EnglishWord {
   updatedAt      DateTime @updatedAt
 
   deck           EnglishDeck @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model EnglishSession {
@@ -180,6 +183,7 @@ model GermanWord {
   updatedAt      DateTime @updatedAt
 
   deck           GermanDeck @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  user           User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model GermanSession {
@@ -324,4 +328,14 @@ model TranslationCache {
 
   @@unique([word, module])
   @@index([word])
+}
+
+model Broadcast {
+  id        String   @id @default(uuid())
+  title     String
+  content   String
+  type      String   @default("info") // 'info' | 'warning' | 'urgent'
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
