@@ -15,11 +15,11 @@ export async function GET(request: Request) {
             const isLocalEnv = process.env.NODE_ENV === 'development'
             if (isLocalEnv) {
                 // we can skip forwarded host and use origin directly in dev
-                return NextResponse.redirect(`${origin}${next}`)
+                return NextResponse.redirect(`${origin}/auth/confirmed`)
             } else if (forwardedHost) {
-                return NextResponse.redirect(`https://${forwardedHost}${next}`)
+                return NextResponse.redirect(`https://${forwardedHost}/auth/confirmed`)
             } else {
-                return NextResponse.redirect(`${origin}${next}`)
+                return NextResponse.redirect(`${origin}/auth/confirmed`)
             }
         }
     }
