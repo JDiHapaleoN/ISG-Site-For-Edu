@@ -41,7 +41,18 @@ export default function Navbar() {
             setUser(session?.user ?? null);
         });
 
-        return () => subscription.unsubscribe();
+        // Activity Tracking
+        const updateActivity = () => {
+            fetch('/api/user/activity', { method: 'POST' }).catch(() => { });
+        };
+
+        updateActivity();
+        const interval = setInterval(updateActivity, 1000 * 60 * 4.5); // Every 4.5 mins
+
+        return () => {
+            subscription.unsubscribe();
+            clearInterval(interval);
+        };
     }, [supabase]);
 
     useEffect(() => {

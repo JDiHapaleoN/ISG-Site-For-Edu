@@ -12,7 +12,7 @@ const supabaseAdmin = createClient(
 export async function GET() {
     try {
         const users = await prisma.user.findMany({
-            select: { id: true, email: true, name: true, createdAt: true },
+            select: { id: true, email: true, name: true, createdAt: true, lastActive: true },
             orderBy: { createdAt: 'desc' }
         });
         return NextResponse.json(users);
@@ -52,22 +52,33 @@ export async function DELETE(req: Request) {
 
 export async function PATCH(req: Request) {
     try {
-        const { id, newPassword } = await req.json();
-        if (!id || !newPassword) return NextResponse.json({ error: 'ID and new password are required' }, { status: 400 });
+        const { id, newPassword, name } = await req.json();
+        if (!id) return NextResponse.json({ error: 'ID is required' }, { status: 400 });
 
-        if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-            return NextResponse.json({ error: 'SUPABASE_SERVICE_ROLE_KEY is missing. Cannot change passwords.' }, { status: 403 });
+        // Update Prisma fields first (name)
+        if (name !== undefined) {
+            await prisma.user.update({
+                where: { id },
+                data: { name }
+            });
         }
 
-        const { error } = await supabaseAdmin.auth.admin.updateUserById(id, { password: newPassword });
-        if (error) {
-            console.error("Supabase Admin Update Error:", error);
-            return NextResponse.json({ error: error.message }, { status: 500 });
+        // Update Supabase password if provided
+        if (newPassword) {
+            if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+                return NextResponse.json({ error: 'SUPABASE_SERVICE_ROLE_KEY is missing. Cannot change passwords.' }, { status: 403 });
+            }
+
+            const { error } = await supabaseAdmin.auth.admin.updateUserById(id, { password: newPassword });
+            if (error) {
+                console.error("Supabase Admin Update Error:", error);
+                return NextResponse.json({ error: error.message }, { status: 500 });
+            }
         }
 
         return NextResponse.json({ success: true });
     } catch (e) {
         console.error(e);
-        return NextResponse.json({ error: 'Failed to update user password' }, { status: 500 });
+        return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
     }
 }

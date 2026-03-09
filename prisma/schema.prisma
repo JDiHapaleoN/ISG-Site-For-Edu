@@ -22,6 +22,7 @@ model User {
 
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  lastActive      DateTime? @default(now())
   
   // Customization
   avatarUrl     String?
@@ -47,6 +48,7 @@ model User {
   organizerHabits OrganizerHabit[]
   englishWords    EnglishWord[]
   germanWords     GermanWord[]
+  systemLogs      SystemLog[]
 }
 
 // ============================================
@@ -338,4 +340,20 @@ model Broadcast {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model SystemLog {
+  id        String   @id @default(uuid())
+  level     String   // 'info' | 'warn' | 'error' | 'success'
+  message   String
+  context   String?  // e.g. 'AdminAction', 'TranslationAPI', 'Auth'
+  userId    String?
+  metadata  Json?    // Extra data like oldVal/newVal or error stack
+  createdAt DateTime @default(now())
+
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([level])
+  @@index([context])
+  @@index([createdAt])
 }
