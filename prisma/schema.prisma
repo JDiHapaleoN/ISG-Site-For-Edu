@@ -310,3 +310,18 @@ model AnalyticsEvent {
   @@index([userId])
   @@index([createdAt])
 }
+
+// ============================================
+// SYSTEM CACHES
+// ============================================
+
+model TranslationCache {
+  id              String   @id @default(uuid())
+  word            String
+  module          String   // 'english' | 'german'
+  translationData String   // JSON string of the translation
+  createdAt       DateTime @default(now())
+
+  @@unique([word, module])
+  @@index([word])
+}

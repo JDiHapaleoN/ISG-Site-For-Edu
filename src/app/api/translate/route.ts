@@ -28,8 +28,54 @@ export async function POST(req: Request) {
     }
 
     const isGerman = module === "german";
+    const cacheKeyWord = word.trim().toLowerCase();
 
-    // System prompt enforces mapping to Russian and extracting specific properties based on language
+    // Helper to check if the current user already has this word in their SRS dictionary
+    const checkIsAdded = async (term: string) => {
+      try {
+        const supabase = createClient();
+        const { data: { user: supabaseUser } } = await supabase.auth.getUser();
+        if (!supabaseUser) return false;
+
+        const user = await ensurePrismaUser(supabaseUser);
+        if (!user) return false;
+
+        if (isGerman) {
+          const existing = await prisma.germanWord.findFirst({
+            where: { userId: user.id, term: { equals: term, mode: 'insensitive' } },
+            select: { id: true }
+          });
+          return !!existing;
+        } else {
+          const existing = await prisma.englishWord.findFirst({
+            where: { userId: user.id, term: { equals: term, mode: 'insensitive' } },
+            select: { id: true }
+          });
+          return !!existing;
+        }
+      } catch (e) {
+        console.error("User dictionary check error:", e);
+        return false;
+      }
+    };
+
+    // 1. Check Global DB Cache
+    try {
+      const cached = await prisma.translationCache.findUnique({
+        where: { word_module: { word: cacheKeyWord, module } }
+      });
+
+      if (cached) {
+        console.log(`[Translate Cache Hit] ${cacheKeyWord}`);
+        const translationData = JSON.parse(cached.translationData);
+        const isAdded = await checkIsAdded(translationData.term);
+        return NextResponse.json({ ...translationData, isAdded });
+      }
+    } catch (e) {
+      console.error("Cache read error:", e);
+    }
+
+    // 2. Fetch from Gemini if not cached
     const prompt = `
 You are a linguistic expert assisting a native Russian speaker studying ${isGerman ? "German" : "English"} at an advanced level.
 Analyze the provided word in the given context. 
@@ -53,39 +99,30 @@ Return only JSON.
 
     const result = await generateContentWithFallback(prompt, { responseMimeType: "application/json" });
     const responseText = result.response.text();
-    console.log("Gemini Response:", responseText);
+    console.log(`[Translate API Hit] ${cacheKeyWord}`);
 
     if (!responseText) throw new Error("No response from Gemini");
 
-    // Clean response from markdown backticks if present
     const cleanJson = responseText.replace(/```json\n?|```/g, "").trim();
     const translationData = JSON.parse(cleanJson);
 
-    // Check if word already exists in SRS for the authenticated user
-    let isAdded = false;
+    // 3. Save to Global DB Cache
     try {
-      const supabase = createClient();
-      const { data: { user: supabaseUser } } = await supabase.auth.getUser();
-
-      if (supabaseUser) {
-        const user = await ensurePrismaUser(supabaseUser);
-        if (user) {
-          if (isGerman) {
-            const existing = await prisma.germanWord.findFirst({
-              where: { userId: user.id, term: { equals: translationData.term, mode: 'insensitive' } }
-            });
-            isAdded = !!existing;
-          } else {
-            const existing = await prisma.englishWord.findFirst({
-              where: { userId: user.id, term: { equals: translationData.term, mode: 'insensitive' } }
-            });
-            isAdded = !!existing;
-          }
+      await prisma.translationCache.upsert({
+        where: { word_module: { word: cacheKeyWord, module } },
+        update: { translationData: JSON.stringify(translationData) },
+        create: {
+          word: cacheKeyWord,
+          module,
+          translationData: JSON.stringify(translationData)
         }
-      }
-    } catch (dbError) {
-      console.error("DB Check Error or Auth Error:", dbError);
+      });
+    } catch (e) {
+      console.error("Cache write error:", e);
     }
+
+    // Check if added to user dictionary
+    const isAdded = await checkIsAdded(translationData.term);
 
     return NextResponse.json({ ...translationData, isAdded });
   } catch (error: any) {
