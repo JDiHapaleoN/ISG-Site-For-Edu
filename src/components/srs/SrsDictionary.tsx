@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-
-import { Search, Loader2, Trash2, BookOpen, Clock, AlertCircle, PlayCircle, Plus, X, Sparkles } from "lucide-react";
+import { Search, Loader2, Trash2, BookOpen, Clock, AlertCircle, PlayCircle, Plus, X, Sparkles, Download, Upload, FileJson } from "lucide-react";
 import { EnglishWord, GermanWord } from "@prisma/client";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -31,6 +30,9 @@ export default function SrsDictionary({ module }: SrsDictionaryProps) {
         transcription: "", // or article for german, can repurpose
         mnemonic: ""
     });
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+    const [importData, setImportData] = useState<any>(null);
+    const [importStats, setImportStats] = useState<{ total: number, imported: number, skipped: number } | null>(null);
 
     // Debounce search input
     useEffect(() => {
@@ -182,6 +184,62 @@ export default function SrsDictionary({ module }: SrsDictionaryProps) {
         }
     };
 
+    const handleExport = async () => {
+        try {
+            window.location.href = `/api/srs/export?module=${module}`;
+            toast.success("Словарь готовится к скачиванию...");
+        } catch (error) {
+            toast.error("Ошибка при экспорте.");
+        }
+    };
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+            try {
+                const data = JSON.parse(event.target?.result as string);
+                if (!data.words || !Array.isArray(data.words)) {
+                    toast.error("Неверный формат файла.");
+                    return;
+                }
+                setImportData(data);
+                setIsImportModalOpen(true);
+                setImportStats(null);
+            } catch (error) {
+                toast.error("Ошибка при чтении файла JSON.");
+            }
+        };
+        reader.readAsText(file);
+    };
+
+    const confirmImport = async () => {
+        if (!importData) return;
+        setIsSubmitting(true);
+        try {
+            const res = await fetch("/api/srs/import", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(importData)
+            });
+
+            if (res.ok) {
+                const result = await res.json();
+                setImportStats(result.stats);
+                mutate();
+                toast.success(`Импорт завершен! Добавлено: ${result.stats.imported}`);
+            } else {
+                toast.error("Ошибка при импорте.");
+            }
+        } catch (error) {
+            toast.error("Ошибка сети.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     const filteredWords = words; // Already filtered by DB
 
     if (isLoading && !words.length) {
@@ -219,6 +277,33 @@ export default function SrsDictionary({ module }: SrsDictionaryProps) {
                     >
                         <Plus className="w-5 h-5" />
                         <span className="hidden sm:inline ml-2 font-medium">Добавить</span>
+                    </button>
+
+                    {/* Import Button */}
+                    <div className="relative overflow-hidden flex items-center justify-center">
+                        <input
+                            type="file"
+                            accept=".json"
+                            onChange={handleFileChange}
+                            className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                        />
+                        <button
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white p-4 rounded-2xl transition-colors shadow-sm flex items-center justify-center shrink-0"
+                            title="Импортировать словарь"
+                        >
+                            <Upload className="w-5 h-5" />
+                            <span className="hidden sm:inline ml-2 font-medium">Импорт</span>
+                        </button>
+                    </div>
+
+                    {/* Export Button */}
+                    <button
+                        onClick={handleExport}
+                        className="bg-zinc-800 hover:bg-zinc-700 text-white p-4 rounded-2xl transition-colors shadow-sm flex items-center justify-center shrink-0"
+                        title="Экспортировать словарь"
+                    >
+                        <Download className="w-5 h-5" />
+                        <span className="hidden sm:inline ml-2 font-medium">Экспорт</span>
                     </button>
                 </div>
 
@@ -269,7 +354,7 @@ export default function SrsDictionary({ module }: SrsDictionaryProps) {
                 </div>
             </div>
 
-            {/* Right Col: Word Details (Mobile Overlay / Desktop Sticky Sidebar) */}
+            {/* Right Col: Word Details */}
             <AnimatePresence>
                 {selectedWord && (
                     <motion.div
@@ -278,18 +363,13 @@ export default function SrsDictionary({ module }: SrsDictionaryProps) {
                         exit={{ opacity: 0, y: 20, scale: 0.95 }}
                         className="fixed inset-0 z-50 md:static md:w-[400px] md:z-auto md:shrink-0 flex flex-col"
                     >
-                        {/* Mobile backdrop */}
                         <div className="absolute inset-0 bg-black/50 backdrop-blur-sm md:hidden" onClick={() => setSelectedWord(null)} />
-
-                        {/* Card Container */}
                         <div className="absolute bottom-0 left-0 right-0 top-16 md:top-auto md:relative md:h-auto bg-white dark:bg-zinc-900 md:rounded-3xl rounded-t-3xl border border-zinc-200 dark:border-zinc-800 shadow-2xl md:shadow-lg flex flex-col overflow-hidden">
-                            {/* Header Handle for Mobile */}
                             <div className="w-full flex justify-center py-3 md:hidden" onClick={() => setSelectedWord(null)}>
                                 <div className="w-12 h-1.5 bg-zinc-300 dark:bg-zinc-700 rounded-full" />
                             </div>
 
                             <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
-                                {/* Title and Delete */}
                                 <div className="flex justify-between items-start gap-4">
                                     <div>
                                         <h2 className="text-3xl font-black text-zinc-900 dark:text-white break-words">
@@ -303,37 +383,29 @@ export default function SrsDictionary({ module }: SrsDictionaryProps) {
                                         onClick={() => handleDelete(selectedWord.id)}
                                         disabled={isSubmitting}
                                         className="p-3 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl transition-colors shrink-0"
-                                        title="Удалить карточку"
                                     >
                                         <Trash2 className="w-5 h-5" />
                                     </button>
                                 </div>
 
-                                {/* Translation */}
                                 <div className="bg-indigo-50 dark:bg-indigo-900/10 p-4 rounded-2xl">
                                     <p className="font-bold text-indigo-900 dark:text-indigo-200 text-lg">
                                         {selectedWord.translation || "Перевод не указан"}
                                     </p>
                                 </div>
 
-                                {/* Context */}
                                 {(selectedWord.context || selectedWord.contextTranslation) && (
                                     <div className="space-y-3">
                                         <h4 className="text-xs font-black uppercase tracking-widest text-zinc-400 flex items-center gap-2">
                                             <BookOpen className="w-3.5 h-3.5" /> Контекст
                                         </h4>
                                         <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl space-y-2">
-                                            {selectedWord.context && (
-                                                <p className="text-zinc-900 dark:text-zinc-100 italic">"{selectedWord.context}"</p>
-                                            )}
-                                            {selectedWord.contextTranslation && (
-                                                <p className="text-zinc-500 text-sm">{selectedWord.contextTranslation}</p>
-                                            )}
+                                            {selectedWord.context && <p className="text-zinc-900 dark:text-zinc-100 italic">"{selectedWord.context}"</p>}
+                                            {selectedWord.contextTranslation && <p className="text-zinc-500 text-sm">{selectedWord.contextTranslation}</p>}
                                         </div>
                                     </div>
                                 )}
 
-                                {/* Mnemonic */}
                                 {selectedWord.mnemonic && (
                                     <div className="space-y-3">
                                         <h4 className="text-xs font-black uppercase tracking-widest text-zinc-400 flex items-center gap-2">
@@ -345,7 +417,6 @@ export default function SrsDictionary({ module }: SrsDictionaryProps) {
                                     </div>
                                 )}
 
-                                {/* Scheduling Info */}
                                 <div className="space-y-3 mt-auto">
                                     <h4 className="text-xs font-black uppercase tracking-widest text-zinc-400 flex items-center gap-2">
                                         <Clock className="w-3.5 h-3.5" /> Перенести / Оценить
@@ -353,67 +424,34 @@ export default function SrsDictionary({ module }: SrsDictionaryProps) {
                                     <p className="text-sm text-zinc-500 mb-2">
                                         Следующее повторение: <span className="font-bold text-indigo-500">{new Date(selectedWord.nextReview).toLocaleString("ru", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
                                     </p>
-
                                     <div className="grid grid-cols-4 gap-2">
-                                        <button
-                                            disabled={isSubmitting}
-                                            onClick={() => handleReschedule(1)}
-                                            className="px-1 py-3 bg-rose-100 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400 rounded-xl flex flex-col items-center justify-center hover:bg-rose-200 dark:hover:bg-rose-900/50 transition-colors"
-                                        >
-                                            <span className="text-xs font-bold leading-none mb-1">Опять</span>
-                                            <span className="text-[10px] opacity-70 leading-none">1 мин</span>
-                                        </button>
-                                        <button
-                                            disabled={isSubmitting}
-                                            onClick={() => handleReschedule(3)}
-                                            className="px-1 py-3 bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 rounded-xl flex flex-col items-center justify-center hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors"
-                                        >
-                                            <span className="text-xs font-bold leading-none mb-1">Трудно</span>
-                                            <span className="text-[10px] opacity-70 leading-none">10 мин</span>
-                                        </button>
-                                        <button
-                                            disabled={isSubmitting}
-                                            onClick={() => handleReschedule(4)}
-                                            className="px-1 py-3 bg-emerald-100 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 rounded-xl flex flex-col items-center justify-center hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-colors"
-                                        >
-                                            <span className="text-xs font-bold leading-none mb-1">Хорошо</span>
-                                            <span className="text-[10px] opacity-70 leading-none">30 мин</span>
-                                        </button>
-                                        <button
-                                            disabled={isSubmitting}
-                                            onClick={() => handleReschedule(5)}
-                                            className="px-1 py-3 bg-cyan-100 dark:bg-cyan-950/30 text-cyan-700 dark:text-cyan-400 rounded-xl flex flex-col items-center justify-center hover:bg-cyan-200 dark:hover:bg-cyan-900/50 transition-colors"
-                                        >
-                                            <span className="text-xs font-bold leading-none mb-1">Легко</span>
-                                            <span className="text-[10px] opacity-70 leading-none">12 часов</span>
-                                        </button>
+                                        {[{ q: 1, label: "Опять", t: "1 мин", c: "rose" }, { q: 3, label: "Трудно", t: "10 мин", c: "amber" }, { q: 4, label: "Хорошо", t: "30 мин", c: "emerald" }, { q: 5, label: "Легко", t: "12 ч", c: "cyan" }].map(item => (
+                                            <button
+                                                key={item.q}
+                                                disabled={isSubmitting}
+                                                onClick={() => handleReschedule(item.q)}
+                                                className={`px-1 py-3 bg-${item.c}-100 dark:bg-${item.c}-950/30 text-${item.c}-700 dark:text-${item.c}-400 rounded-xl flex flex-col items-center justify-center hover:bg-${item.c}-200 transition-colors`}
+                                            >
+                                                <span className="text-xs font-bold leading-none mb-1">{item.label}</span>
+                                                <span className="text-[10px] opacity-70 leading-none">{item.t}</span>
+                                            </button>
+                                        ))}
                                     </div>
-                                    <div className="pt-2">
-                                        <button
-                                            onClick={() => handleReschedule(0)}
-                                            disabled={isSubmitting}
-                                            className="w-full py-3 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-xl text-sm font-bold flex flex-col items-center justify-center hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors border border-indigo-100 dark:border-indigo-800/50"
-                                        >
-                                            <div className="flex items-center gap-1.5 leading-none mb-1">
-                                                <PlayCircle className="w-4 h-4" />
-                                                Начать активное повторение
-                                            </div>
-                                            <span className="text-[10px] font-medium opacity-80 leading-none">
-                                                Снимает задолженность и переносит для немедленного повторения в тренажер
-                                            </span>
-                                        </button>
-                                    </div>
+                                    <button
+                                        onClick={() => handleReschedule(0)}
+                                        disabled={isSubmitting}
+                                        className="w-full py-3 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-xl text-sm font-bold flex flex-col items-center justify-center hover:bg-indigo-100 transition-colors border border-indigo-100 dark:border-indigo-800/50 mt-2"
+                                    >
+                                        <div className="flex items-center gap-1.5 leading-none mb-1">
+                                            <PlayCircle className="w-4 h-4" /> Начать активное повторение
+                                        </div>
+                                        <span className="text-[10px] font-medium opacity-80 leading-none text-center px-2">Снимает задолженность и переносит в тренажер</span>
+                                    </button>
                                 </div>
                             </div>
 
-                            {/* Mobile Close Button (Bottom) */}
                             <div className="p-4 md:hidden border-t border-zinc-200 dark:border-zinc-800">
-                                <button
-                                    onClick={() => setSelectedWord(null)}
-                                    className="w-full py-4 bg-zinc-100 dark:bg-zinc-800 rounded-xl font-bold text-zinc-600 dark:text-zinc-400"
-                                >
-                                    Закрыть вкладку
-                                </button>
+                                <button onClick={() => setSelectedWord(null)} className="w-full py-4 bg-zinc-100 dark:bg-zinc-800 rounded-xl font-bold text-zinc-600 dark:text-zinc-400">Закрыть вкладку</button>
                             </div>
                         </div>
                     </motion.div>
@@ -424,124 +462,87 @@ export default function SrsDictionary({ module }: SrsDictionaryProps) {
             <AnimatePresence>
                 {isAddModalOpen && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => setIsAddModalOpen(false)}
-                            className="absolute inset-0 bg-zinc-900/60 backdrop-blur-sm"
-                        />
-                        <motion.div
-                            initial={{ scale: 0.95, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.95, opacity: 0 }}
-                            className="relative w-full max-w-md bg-white dark:bg-zinc-900 rounded-2xl shadow-xl overflow-hidden"
-                        >
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsAddModalOpen(false)} className="absolute inset-0 bg-zinc-900/60 backdrop-blur-sm" />
+                        <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="relative w-full max-w-md bg-white dark:bg-zinc-900 rounded-2xl shadow-xl overflow-hidden">
                             <div className="p-6 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center">
                                 <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Добавить слово</h3>
-                                <button
-                                    onClick={() => setIsAddModalOpen(false)}
-                                    className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 rounded-lg transition-colors"
-                                >
-                                    <X className="w-5 h-5" />
-                                </button>
+                                <button onClick={() => setIsAddModalOpen(false)} className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 rounded-lg transition-colors"><X className="w-5 h-5" /></button>
                             </div>
 
                             <form onSubmit={handleAddSubmit} className="p-6 space-y-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                                        Слово <span className="text-red-500">*</span>
-                                    </label>
+                                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Слово <span className="text-red-500">*</span></label>
                                     <div className="flex gap-2">
-                                        <input
-                                            type="text"
-                                            required
-                                            value={newWordForm.word}
-                                            onChange={e => setNewWordForm({ ...newWordForm, word: e.target.value })}
-                                            className="w-full p-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-indigo-500"
-                                            placeholder="Например: Apple"
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={handleAutoFill}
-                                            disabled={isGenerating || !newWordForm.word.trim() || isSubmitting}
-                                            className="px-4 bg-amber-100 hover:bg-amber-200 text-amber-600 dark:bg-amber-900/30 dark:hover:bg-amber-800/50 dark:text-amber-400 rounded-xl transition-colors shrink-0 flex items-center justify-center font-medium disabled:opacity-50"
-                                            title="Сгенерировать перевод и контекст через ИИ"
-                                        >
+                                        <input type="text" required value={newWordForm.word} onChange={e => setNewWordForm({ ...newWordForm, word: e.target.value })} className="w-full p-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-indigo-500" placeholder="Например: Apple" />
+                                        <button type="button" onClick={handleAutoFill} disabled={isGenerating || !newWordForm.word.trim() || isSubmitting} className="px-4 bg-amber-100 hover:bg-amber-200 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400 rounded-xl transition-colors shrink-0 flex items-center justify-center font-medium disabled:opacity-50" title="Сгенерировать через ИИ">
                                             {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
                                         </button>
                                     </div>
-                                    <p className="text-xs text-zinc-500 mt-1.5 ml-1">
-                                        Введите слово и нажмите ✨, чтобы ИИ заполнил остальное.
-                                    </p>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                                        Перевод <span className="text-red-500">*</span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={newWordForm.translation}
-                                        onChange={e => setNewWordForm({ ...newWordForm, translation: e.target.value })}
-                                        className="w-full p-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-indigo-500"
-                                        placeholder="Например: Яблоко"
-                                    />
+                                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Перевод <span className="text-red-500">*</span></label>
+                                    <input type="text" required value={newWordForm.translation} onChange={e => setNewWordForm({ ...newWordForm, translation: e.target.value })} className="w-full p-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-indigo-500" placeholder="Например: Яблоко" />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                                        Пример (Контекст)
-                                    </label>
-                                    <textarea
-                                        value={newWordForm.contextSentence}
-                                        onChange={e => setNewWordForm({ ...newWordForm, contextSentence: e.target.value })}
-                                        className="w-full p-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-indigo-500"
-                                        placeholder="Необязательно"
-                                        rows={2}
-                                    />
+                                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Пример (Контекст)</label>
+                                    <textarea value={newWordForm.contextSentence} onChange={e => setNewWordForm({ ...newWordForm, contextSentence: e.target.value })} className="w-full p-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-indigo-500" placeholder="Необязательно" rows={2} />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                                        Мнемоника / Ассоциация
-                                    </label>
-                                    <textarea
-                                        value={newWordForm.mnemonic}
-                                        onChange={e => setNewWordForm({ ...newWordForm, mnemonic: e.target.value })}
-                                        className="w-full p-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-amber-500"
-                                        placeholder="Ассоциация для легкого запоминания..."
-                                        rows={2}
-                                    />
+                                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Мнемоника / Ассоциация</label>
+                                    <textarea value={newWordForm.mnemonic} onChange={e => setNewWordForm({ ...newWordForm, mnemonic: e.target.value })} className="w-full p-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-amber-500" placeholder="Ассоциация..." rows={2} />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                                        {module === 'german' ? 'Артикль / Доп. инфо' : 'Транскрипция'}
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={newWordForm.transcription}
-                                        onChange={e => setNewWordForm({ ...newWordForm, transcription: e.target.value })}
-                                        className="w-full p-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-indigo-500"
-                                        placeholder={module === 'german' ? 'der, die, das...' : '/ˈæp.əl/'}
-                                    />
+                                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">{module === 'german' ? 'Артикль' : 'Транскрипция'}</label>
+                                    <input type="text" value={newWordForm.transcription} onChange={e => setNewWordForm({ ...newWordForm, transcription: e.target.value })} className="w-full p-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-indigo-500" placeholder={module === 'german' ? 'der...' : '/ˈæp.əl/'} />
                                 </div>
-
                                 <div className="pt-4 flex gap-3">
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsAddModalOpen(false)}
-                                        className="flex-1 py-3 px-4 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-xl font-medium transition-colors"
-                                    >
-                                        Отмена
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={isSubmitting}
-                                        className="flex-1 py-3 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
-                                    >
+                                    <button type="button" onClick={() => setIsAddModalOpen(false)} className="flex-1 py-3 px-4 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-xl font-medium transition-colors">Отмена</button>
+                                    <button type="submit" disabled={isSubmitting} className="flex-1 py-3 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl font-medium transition-colors flex items-center justify-center gap-2">
                                         {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Сохранить"}
                                     </button>
                                 </div>
                             </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Import Confirmation Modal */}
+            <AnimatePresence>
+                {isImportModalOpen && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsImportModalOpen(false)} className="absolute inset-0 bg-zinc-900/60 backdrop-blur-sm" />
+                        <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="relative w-full max-w-md bg-white dark:bg-zinc-900 rounded-2xl shadow-xl overflow-hidden">
+                            <div className="p-6 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center">
+                                <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Импорт словаря</h3>
+                                <button onClick={() => setIsImportModalOpen(false)} className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 rounded-lg transition-colors"><X className="w-5 h-5" /></button>
+                            </div>
+                            <div className="p-6 space-y-4 text-center">
+                                {!importStats ? (
+                                    <>
+                                        <div className="w-16 h-16 bg-emerald-50 dark:bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                                            <FileJson className="w-8 h-8 text-emerald-500" />
+                                        </div>
+                                        <h4 className="font-bold text-lg">Обнаружен список: {importData?.metadata?.module === 'english' ? '🇬🇧 Английский' : '🇩🇪 Немецкий'}</h4>
+                                        <p className="text-zinc-500 text-sm">Автор: <span className="font-bold text-zinc-900 dark:text-zinc-100">{importData?.metadata?.author || 'Неизвестен'}</span><br />Количество слов: <span className="font-bold text-indigo-500">{importData?.words?.length || 0}</span></p>
+                                        <div className="flex gap-3 pt-4">
+                                            <button onClick={() => setIsImportModalOpen(false)} className="flex-1 py-3 px-4 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-xl font-medium">Отмена</button>
+                                            <button onClick={confirmImport} disabled={isSubmitting} className="flex-1 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium flex items-center justify-center gap-2">{isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Начать импорт"}</button>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="w-16 h-16 bg-indigo-50 dark:bg-indigo-500/10 rounded-full flex items-center justify-center mx-auto mb-4"><Sparkles className="w-8 h-8 text-indigo-500" /></div>
+                                        <h4 className="font-bold text-lg">Импорт завершен!</h4>
+                                        <div className="grid grid-cols-3 gap-2 py-4">
+                                            <div className="p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl"><p className="text-xs text-zinc-400">Всего</p><p className="text-lg font-bold">{importStats.total}</p></div>
+                                            <div className="p-3 bg-emerald-50 dark:bg-emerald-500/10 rounded-xl"><p className="text-xs text-emerald-500/70">Новых</p><p className="text-lg font-bold text-emerald-500">{importStats.imported}</p></div>
+                                            <div className="p-3 bg-rose-50 dark:bg-rose-500/10 rounded-xl"><p className="text-xs text-rose-500/70">Дубликатов</p><p className="text-lg font-bold text-rose-500">{importStats.skipped}</p></div>
+                                        </div>
+                                        <button onClick={() => setIsImportModalOpen(false)} className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium mt-4">Отлично</button>
+                                    </>
+                                )}
+                            </div>
                         </motion.div>
                     </div>
                 )}
