@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { BookOpen, Volume2, PlusCircle, Check, Loader2, Highlighter, X } from "lucide-react";
 
@@ -36,6 +36,7 @@ export default function InteractiveReader({ initialText, module, initialHighligh
     const [highlights, setHighlights] = useState<Set<number>>(new Set(initialHighlights || []));
     const [isHighlightMode, setIsHighlightMode] = useState(false);
     const [translationError, setTranslationError] = useState<string | null>(null);
+    const translationCache = useRef<Record<string, WordData>>({});
 
     // Simple tokenization retaining spaces/punctuation in the array for rendering
     // We use regex to split keeping word characters grouped, supporting Unicode (Umlauts etc)
@@ -69,9 +70,6 @@ export default function InteractiveReader({ initialText, module, initialHighligh
         const cleanWord = chunk.trim().replace(/[.,!?;()":]/g, "");
         if (!cleanWord || !/[\p{L}\p{N}]/u.test(cleanWord)) return;
 
-        setIsTranslating(true);
-        setTranslationError(null);
-
         // Extract context sentence more reliably
         const textToSearch = customText;
         const startIdx = textToSearch.indexOf(chunk);
@@ -81,6 +79,18 @@ export default function InteractiveReader({ initialText, module, initialHighligh
             const after = textToSearch.substring(startIdx + chunk.length).split(/[.!?]/)[0] || "";
             context = (before + chunk + after).trim() + ".";
         }
+
+        const cacheKey = cleanWord.toLowerCase();
+
+        // Check local cache to save AI tokens and time
+        if (translationCache.current[cacheKey]) {
+            const cachedData = translationCache.current[cacheKey];
+            setSelectedWord({ ...cachedData, context });
+            return;
+        }
+
+        setIsTranslating(true);
+        setTranslationError(null);
 
         try {
             const res = await fetch("/api/translate", {
@@ -95,7 +105,12 @@ export default function InteractiveReader({ initialText, module, initialHighligh
             }
             const data = await res.json();
 
-            setSelectedWord({ ...data, context, isAdded: data.isAdded || false });
+            const newWordData = { ...data, context, isAdded: data.isAdded || false };
+
+            // Save to cache
+            translationCache.current[cacheKey] = newWordData;
+
+            setSelectedWord(newWordData);
         } catch (err: any) {
             console.error(err);
             setTranslationError(err.message || "Не удалось загрузить перевод. Пожалуйста, проверьте соединение.");
