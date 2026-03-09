@@ -19,12 +19,19 @@ export async function GET(req: Request) {
                     id: true,
                     name: true,
                     avatarUrl: true,
-                    friendCode: true
+                    friendCode: true,
+                    lastActive: true,
                 }
             });
 
             if (!profile) return NextResponse.json({ error: "Не найдено" }, { status: 404 });
-            return NextResponse.json(profile);
+
+            // Calculate online status (active in last 5 minutes)
+            const isOnline = profile.lastActive
+                ? (new Date().getTime() - new Date(profile.lastActive).getTime()) < 5 * 60 * 1000
+                : false;
+
+            return NextResponse.json({ ...profile, isOnline });
         }
 
         // Fetch own complete profile
@@ -32,7 +39,11 @@ export async function GET(req: Request) {
         const user = await ensurePrismaUser(supabaseUser);
         if (!user) return NextResponse.json({ error: "User sync failed" }, { status: 500 });
 
-        return NextResponse.json(user);
+        const isOnline = user.lastActive
+            ? (new Date().getTime() - new Date(user.lastActive).getTime()) < 5 * 60 * 1000
+            : true;
+
+        return NextResponse.json({ ...user, isOnline });
 
     } catch (error) {
         console.error("API GET user profile error:", error);
