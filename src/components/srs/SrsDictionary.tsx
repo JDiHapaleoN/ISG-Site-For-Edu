@@ -291,7 +291,7 @@ export default function SrsDictionary({ module }: SrsDictionaryProps) {
                             className="bg-emerald-600 hover:bg-emerald-700 text-white p-4 rounded-2xl transition-colors shadow-sm flex items-center justify-center shrink-0"
                             title="Импортировать словарь"
                         >
-                            <Upload className="w-5 h-5" />
+                            <Download className="w-5 h-5" />
                             <span className="hidden sm:inline ml-2 font-medium">Импорт</span>
                         </button>
                     </div>
@@ -302,7 +302,7 @@ export default function SrsDictionary({ module }: SrsDictionaryProps) {
                         className="bg-zinc-800 hover:bg-zinc-700 text-white p-4 rounded-2xl transition-colors shadow-sm flex items-center justify-center shrink-0"
                         title="Экспортировать словарь"
                     >
-                        <Download className="w-5 h-5" />
+                        <Upload className="w-5 h-5" />
                         <span className="hidden sm:inline ml-2 font-medium">Экспорт</span>
                     </button>
                 </div>
