@@ -15,6 +15,10 @@ model User {
   targetIelts   Float?    
   targetTestDaf String?   
   
+  // Security & Moderation
+  isBanned      Boolean   @default(false)
+  banReason     String?
+  
   // Reader Persistence
   activeReaderText       String?
   activeReaderModule     String?   // 'english' | 'german'
@@ -22,7 +26,7 @@ model User {
 
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-  lastActive      DateTime? @default(now())
+  lastActive    DateTime? @default(now())
   
   // Customization
   avatarUrl     String?

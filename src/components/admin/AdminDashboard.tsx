@@ -6,11 +6,11 @@ import {
     Trash2, KeyRound, LayoutDashboard, Globe, History,
     Search, ChevronRight, Menu, X, Filter, Trash, Activity,
     AlertCircle, ShieldAlert, CheckCircle2, Terminal, PenTool,
-    RefreshCw, ShieldX
+    RefreshCw, ShieldX, BarChart3, PieChart, Zap, Hammer, Shield
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-type AdminTab = "dashboard" | "users" | "dictionary" | "cache" | "broadcasts" | "logs";
+type AdminTab = "dashboard" | "users" | "dictionary" | "cache" | "broadcasts" | "logs" | "analytics" | "system";
 
 interface AdminStats {
     userCount: number;
@@ -19,6 +19,9 @@ interface AdminStats {
     messages: number;
     cacheEntries: number;
     broadcasts: number;
+    goals?: { ielts: number, testDaf: number, other: number };
+    activity?: { online: number, active24h: number, active7d: number };
+    trends?: { date: string, count: number }[];
 }
 
 interface UserData {
@@ -27,6 +30,10 @@ interface UserData {
     name: string | null;
     createdAt: string;
     lastActive: string | null;
+    isBanned?: boolean;
+    banReason?: string | null;
+    targetIelts?: number | null;
+    targetTestDaf?: string | null;
 }
 
 interface WordData {
@@ -111,6 +118,9 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
             } else if (activeTab === "logs") {
                 const res = await fetch('/api/admin/logs');
                 setLogs(await res.json());
+            } else if (activeTab === "system") {
+                const res = await fetch('/api/admin/system');
+                setSystemInfo(await res.json());
             }
         } catch (e) {
             console.error("Fetch error:", e);
@@ -118,6 +128,8 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
             setLoading(false);
         }
     };
+
+    const [systemInfo, setSystemInfo] = useState<any>(null);
 
     const createLog = async (level: string, message: string, context: string, metadata: any = {}) => {
         try {
@@ -186,11 +198,13 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
     const menuItems = [
         { id: "dashboard", label: "Сводка", icon: LayoutDashboard },
+        { id: "analytics", label: "Аналитика", icon: Activity },
         { id: "users", label: "Пользователи", icon: Users },
         { id: "dictionary", label: "Живой Словарь", icon: BookOpen },
         { id: "cache", label: "Кэш Переводов", icon: Database },
         { id: "broadcasts", label: "Объявления", icon: Globe },
-        { id: "logs", label: "Логи системы", icon: Activity },
+        { id: "logs", label: "Логи системы", icon: Terminal },
+        { id: "system", label: "Система", icon: KeyRound },
     ];
 
     return (
@@ -341,6 +355,8 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                     {activeTab === "cache" && <CacheSection cache={cache} loading={loading} searchTerm={searchTerm} onDelete={handleDeleteCache} selectedIds={selectedIds} onSelectUpdate={setSelectedIds} />}
                     {activeTab === "broadcasts" && <BroadcastsSection broadcasts={broadcasts} loading={loading} onRefresh={fetchData} />}
                     {activeTab === "logs" && <LogsSection logs={logs} loading={loading} />}
+                    {activeTab === "analytics" && <AnalyticsSection stats={stats} loading={loading} />}
+                    {activeTab === "system" && <SystemSection info={systemInfo} loading={loading} onRefresh={fetchData} createLog={createLog} />}
                 </div>
 
                 <AnimatePresence>
@@ -367,9 +383,9 @@ function DashboardSection({ stats, loading, logs }: { stats: AdminStats | null, 
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <StatCard icon={<Users className="w-8 h-8 text-blue-500" />} title="Всего учеников" value={loading ? "..." : stats?.userCount} color="bg-blue-50 dark:bg-blue-500/10" />
-                <StatCard icon={<BookOpen className="w-8 h-8 text-green-500" />} title="Слова в системе" value={loading ? "..." : (stats?.englishWords || 0) + (stats?.germanWords || 0)} color="bg-green-50 dark:bg-green-500/10" />
-                <StatCard icon={<MessageSquare className="w-8 h-8 text-purple-500" />} title="Личные сообщения" value={loading ? "..." : stats?.messages} color="bg-purple-50 dark:bg-purple-500/10" />
-                <StatCard icon={<Globe className="w-8 h-8 text-orange-500" />} title="Объявления" value={loading ? "..." : stats?.broadcasts} color="bg-orange-50 dark:bg-orange-500/10" />
+                <StatCard icon={<Zap className="w-8 h-8 text-emerald-500" />} title="Онлайн (5м)" value={loading ? "..." : stats?.activity?.online} color="bg-emerald-50 dark:bg-emerald-500/10" />
+                <StatCard icon={<Activity className="w-8 h-8 text-purple-500" />} title="Активны (24ч)" value={loading ? "..." : stats?.activity?.active24h} color="bg-purple-50 dark:bg-purple-500/10" />
+                <StatCard icon={<BookOpen className="w-8 h-8 text-orange-500" />} title="Слова в системе" value={loading ? "..." : (stats?.englishWords || 0) + (stats?.germanWords || 0)} color="bg-orange-50 dark:bg-orange-500/10" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -497,6 +513,12 @@ function UsersSection({
                                             {user.lastActive
                                                 ? `Был: ${new Date(user.lastActive).toLocaleDateString()} ${new Date(user.lastActive).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
                                                 : 'Никогда'}
+                                        </div>
+                                    )}
+                                    {user.isBanned && (
+                                        <div className="mt-1 flex items-center gap-1 text-[10px] text-red-500 font-bold uppercase tracking-tighter">
+                                            <ShieldAlert size={10} />
+                                            Banned
                                         </div>
                                     )}
                                 </td>
@@ -901,6 +923,8 @@ function EditUserModal({
 }) {
     const [name, setName] = useState(user.name || "");
     const [password, setPassword] = useState("");
+    const [isBanned, setIsBanned] = useState(user.isBanned || false);
+    const [banReason, setBanReason] = useState(user.banReason || "");
     const [loading, setLoading] = useState(false);
 
     const handleUpdate = async (e: React.FormEvent) => {
@@ -913,13 +937,16 @@ function EditUserModal({
                 body: JSON.stringify({
                     id: user.id,
                     name: name !== user.name ? name : undefined,
-                    newPassword: password || undefined
+                    newPassword: password || undefined,
+                    isBanned,
+                    banReason
                 })
             });
 
             if (res.ok) {
                 if (password) await createLog('warn', `Сброшен пароль пользователя: ${user.email}`, 'UserManagement', { userId: user.id });
                 if (name !== user.name) await createLog('info', `Изменено имя пользователя: ${user.email}`, 'UserManagement', { oldName: user.name, newName: name });
+                if (isBanned !== user.isBanned) await createLog(isBanned ? 'error' : 'success', `${isBanned ? 'Заблокирован' : 'Разблокирован'} пользователь: ${user.email}`, 'UserModeration', { userId: user.id, reason: banReason });
 
                 onRefresh();
                 onClose();
@@ -974,6 +1001,30 @@ function EditUserModal({
                             className="w-full p-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20"
                         />
                         <p className="text-[10px] text-zinc-400 mt-1 ml-1">Пароль будет изменен только в системе Supabase Auth</p>
+                    </div>
+
+                    <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
+                        <div className="flex items-center justify-between mb-3">
+                            <label className="text-sm font-bold flex items-center gap-2">
+                                <Shield className={`w-4 h-4 ${isBanned ? 'text-red-500' : 'text-emerald-500'}`} />
+                                Статус блокировки
+                            </label>
+                            <button
+                                type="button"
+                                onClick={() => setIsBanned(!isBanned)}
+                                className={`w-12 h-6 rounded-full transition-all relative ${isBanned ? 'bg-red-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
+                            >
+                                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${isBanned ? 'left-7' : 'left-1'}`} />
+                            </button>
+                        </div>
+                        {isBanned && (
+                            <input
+                                value={banReason}
+                                onChange={e => setBanReason(e.target.value)}
+                                placeholder="Причина блокировки..."
+                                className="w-full p-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg text-xs outline-none focus:ring-1 focus:ring-red-500/50"
+                            />
+                        )}
                     </div>
 
                     <div className="pt-4 flex gap-3">
@@ -1041,10 +1092,200 @@ function ActivityItem({ icon, color, title, time, description }: { icon: React.R
     );
 }
 
+function AnalyticsSection({ stats, loading }: { stats: any, loading: boolean }) {
+    if (loading) return <div className="p-12 text-center text-zinc-500 animate-pulse">Загрузка аналитики...</div>;
+
+    return (
+        <div className="space-y-8 animate-in fade-in duration-500">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Learning Goals */}
+                <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] p-8 border border-zinc-200 dark:border-zinc-800 shadow-sm">
+                    <h3 className="text-xl font-bold mb-8 flex items-center gap-3">
+                        <PieChart className="text-indigo-500" />
+                        Цели обучения (Экзамены)
+                    </h3>
+                    <div className="space-y-6">
+                        <GoalProgress label="IELTS (English)" count={stats?.goals?.ielts || 0} total={stats?.userCount || 1} color="bg-blue-500" />
+                        <GoalProgress label="TestDaf (German)" count={stats?.goals?.testDaf || 0} total={stats?.userCount || 1} color="bg-amber-500" />
+                        <GoalProgress label="Другие цели" count={stats?.goals?.other || 0} total={stats?.userCount || 1} color="bg-zinc-400" />
+                    </div>
+                </div>
+
+                {/* Registration Trends */}
+                <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] p-8 border border-zinc-200 dark:border-zinc-800 shadow-sm">
+                    <h3 className="text-xl font-bold mb-8 flex items-center gap-3">
+                        <BarChart3 className="text-indigo-500" />
+                        Тренды регистраций (30д)
+                    </h3>
+                    <div className="h-48 flex items-end gap-2 px-2">
+                        {stats?.trends?.slice(-14).map((day: any, i: number) => (
+                            <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
+                                <div
+                                    className="w-full bg-indigo-500/20 group-hover:bg-indigo-500 rounded-t-md transition-all relative"
+                                    style={{ height: `${Math.max((day.count / (Math.max(...stats.trends.map((t: any) => t.count)) || 1)) * 100, 5)}%` }}
+                                >
+                                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 text-[10px] font-bold bg-zinc-800 text-white px-1.5 py-0.5 rounded transition-all">
+                                        {day.count}
+                                    </div>
+                                </div>
+                                <div className="text-[8px] text-zinc-400 rotate-45 origin-left truncate w-8">
+                                    {day.date.split('-').slice(1).reverse().join('.')}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* Engagement metrics */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-emerald-500/5 border border-emerald-500/20 p-6 rounded-3xl">
+                    <p className="text-emerald-600 dark:text-emerald-400 text-xs font-bold uppercase mb-1">Online (5 мин)</p>
+                    <p className="text-4xl font-black">{stats?.activity?.online || 0}</p>
+                </div>
+                <div className="bg-indigo-500/5 border border-indigo-500/20 p-6 rounded-3xl">
+                    <p className="text-indigo-600 dark:text-indigo-400 text-xs font-bold uppercase mb-1">Активны (24ч)</p>
+                    <p className="text-4xl font-black">{stats?.activity?.active24h || 0}</p>
+                </div>
+                <div className="bg-purple-500/5 border border-purple-500/20 p-6 rounded-3xl">
+                    <p className="text-purple-600 dark:text-purple-400 text-xs font-bold uppercase mb-1">Активны (7дн)</p>
+                    <p className="text-4xl font-black">{stats?.activity?.active7d || 0}</p>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function SystemSection({ info, loading, onRefresh, createLog }: { info: any, loading: boolean, onRefresh: () => void, createLog: any }) {
+    const [isActioning, setIsActioning] = useState<string | null>(null);
+
+    const handleAction = async (action: string) => {
+        if (!confirm(`Выполнить действие: ${action}?`)) return;
+        setIsActioning(action);
+        try {
+            const res = await fetch('/api/admin/system', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action })
+            });
+            if (res.ok) {
+                alert("Действие выполнено успешно");
+                onRefresh();
+            }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setIsActioning(null);
+        }
+    };
+
+    if (loading) return <div className="p-12 text-center text-zinc-500">Сбор системной информации...</div>;
+
+    return (
+        <div className="space-y-8 animate-in fade-in duration-500">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Health Overview */}
+                <div className="lg:col-span-2 bg-white dark:bg-zinc-900 rounded-[2.5rem] p-8 border border-zinc-200 dark:border-zinc-800 shadow-sm relative overflow-hidden">
+                    <Zap className="absolute -top-10 -right-10 w-48 h-48 text-indigo-500/5" />
+                    <h3 className="text-xl font-bold mb-8">Состояние системы</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-8">
+                        <div>
+                            <p className="text-xs text-zinc-500 mb-1">Окружение</p>
+                            <p className="text-lg font-bold flex items-center gap-2">
+                                <span className={`w-2 h-2 rounded-full ${info?.environment === 'production' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                                {info?.environment || 'unknown'}
+                            </p>
+                        </div>
+                        <div>
+                            <p className="text-xs text-zinc-500 mb-1">Версия ядра</p>
+                            <p className="text-lg font-bold">ISG {info?.version || '4.x'}</p>
+                        </div>
+                        <div>
+                            <p className="text-xs text-zinc-500 mb-1">База данных</p>
+                            <p className="text-lg font-bold text-emerald-500">{info?.database || 'Connected'}</p>
+                        </div>
+                        <div>
+                            <p className="text-xs text-zinc-500 mb-1">Всего логов</p>
+                            <p className="text-lg font-bold">{info?.metrics?.totalLogs || 0}</p>
+                        </div>
+                        <div>
+                            <p className="text-xs text-zinc-500 mb-1">Кэш переводов</p>
+                            <p className="text-lg font-bold">{info?.metrics?.totalCache || 0}</p>
+                        </div>
+                        <div>
+                            <p className="text-xs text-zinc-500 mb-1">Время развертывания</p>
+                            <p className="text-[10px] font-mono">{info?.metrics?.oldestLogDate ? new Date(info.metrics.oldestLogDate).toLocaleString() : '...'}</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Maintenance Tools */}
+                <div className="bg-zinc-950 text-white rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden">
+                    <Hammer className="absolute -bottom-10 -right-10 w-48 h-48 opacity-10" />
+                    <h3 className="text-xl font-bold mb-6">Техобслуживание</h3>
+                    <div className="space-y-4">
+                        <MaintenanceButton
+                            icon={<Trash2 size={16} />}
+                            label="Очистить старые логи"
+                            desc="Удалить записи > 30 дней"
+                            onClick={() => handleAction('prune-logs')}
+                            loading={isActioning === 'prune-logs'}
+                        />
+                        <MaintenanceButton
+                            icon={<Zap size={16} />}
+                            label="Сбросить кэш ИИ"
+                            desc="Очистить все переводы"
+                            onClick={() => handleAction('clear-cache')}
+                            loading={isActioning === 'clear-cache'}
+                        />
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function MaintenanceButton({ icon, label, desc, onClick, loading }: { icon: any, label: string, desc: string, onClick: () => void, loading?: boolean }) {
+    return (
+        <button
+            onClick={onClick}
+            disabled={loading}
+            className="w-full p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl flex items-center gap-4 transition-all text-left group disabled:opacity-50"
+        >
+            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-white group-hover:scale-110 transition-transform">
+                {loading ? <RefreshCw className="animate-spin" size={16} /> : icon}
+            </div>
+            <div>
+                <p className="text-sm font-bold">{label}</p>
+                <p className="text-[10px] text-zinc-400">{desc}</p>
+            </div>
+        </button>
+    );
+}
+
+function GoalProgress({ label, count, total, color }: { label: string, count: number, total: number, color: string }) {
+    const percentage = Math.round((count / total) * 100);
+    return (
+        <div className="space-y-2">
+            <div className="flex justify-between items-end">
+                <span className="text-sm font-semibold">{label}</span>
+                <span className="text-xs text-zinc-500">{count} учеников ({percentage}%)</span>
+            </div>
+            <div className="w-full h-2.5 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+                <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${percentage}%` }}
+                    className={`h-full ${color}`}
+                />
+            </div>
+        </div>
+    );
+}
+
 function SkeletonRow() {
     return (
         <tr>
-            <td colSpan={5} className="p-6">
+            <td colSpan={10} className="p-6">
                 <div className="h-4 bg-zinc-100 dark:bg-zinc-800 rounded-full animate-pulse w-full"></div>
             </td>
         </tr>
