@@ -219,7 +219,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
             {/* Sidebar */}
             <aside className={`
-                fixed lg:relative inset-y-0 left-0 z-50 w-72 bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 transition-transform duration-300 transform 
+                fixed lg:sticky top-0 z-50 w-72 h-screen bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 transition-transform duration-300 transform 
                 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
             `}>
                 <div className="flex flex-col h-full p-6">
