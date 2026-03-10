@@ -23,6 +23,8 @@ model User {
   activeReaderHighlights Int[]            @default([])
   friendCode             String?          @unique
   lastActive             DateTime?        @default(now())
+  isBanned               Boolean          @default(false)
+  banReason              String?
   englishDecks           EnglishDeck[]
   englishSessions        EnglishSession[]
   englishWords           EnglishWord[]
