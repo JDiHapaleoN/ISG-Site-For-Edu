@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { ensurePrismaUser } from "@/lib/auth-sync";
 import { checkRateLimit, AI_RATE_LIMIT, getClientIp } from "@/lib/rate-limit";
-import { generateContentWithFallback } from "@/lib/gemini";
+import { generateContentWithFallback, GeminiError } from "@/lib/gemini";
 
 const PROMPT_TEMPLATE = `Ты профессиональный лингвист-преподаватель. Пользователь хочет добавить слово или фразу в свой словарь интервальных повторений (SRS).
 Слово/Фраза: "{word}"
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
         const language = module === "german" ? "Немецкий" : "Английский";
         const prompt = PROMPT_TEMPLATE.replace("{word}", word).replace("{language}", language);
 
-        const aiResult: any = await generateContentWithFallback(prompt);
+        const aiResult: any = await generateContentWithFallback(prompt, { responseMimeType: "application/json" });
         const textResult = typeof aiResult.response?.text === 'function' ? aiResult.response.text() : aiResult.response?.text || "";
 
         let parsedResult;
@@ -57,13 +57,19 @@ export async function POST(req: Request) {
             const cleanJson = textResult.replace(/```json/gi, "").replace(/```/g, "").trim();
             parsedResult = JSON.parse(cleanJson);
         } catch (e) {
-            console.error("Failed to parse AI JSON:", aiResult);
+            console.error("Failed to parse AI JSON:", textResult);
             return NextResponse.json({ error: "ИИ вернул неверный формат данных. Попробуйте снова." }, { status: 500 });
         }
 
         return NextResponse.json(parsedResult);
-    } catch (error) {
+    } catch (error: any) {
         console.error("[generate-card route.ts] Error:", error);
-        return NextResponse.json({ error: "Внутренняя ошибка сервера" }, { status: 500 });
+
+        const userMessage = error instanceof GeminiError
+            ? error.userMessage
+            : (error.message || "Внутренняя ошибка сервера");
+        const statusCode = error instanceof GeminiError ? error.statusCode : 500;
+
+        return NextResponse.json({ error: userMessage }, { status: statusCode });
     }
 }
