@@ -33,7 +33,30 @@ export async function GET() {
 }
 
 export async function DELETE(req: Request) {
-    // ... existed logic
+    try {
+        const { searchParams } = new URL(req.url);
+        const id = searchParams.get('id');
+
+        if (!id) return NextResponse.json({ error: 'ID is required' }, { status: 400 });
+
+        // Try to delete from Supabase first if we have the service key
+        if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+            const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(id);
+            if (authError) {
+                console.error("Supabase Auth Delete Error:", authError);
+                // We continue to delete from Prisma even if Supabase delete fails 
+                // (e.g. if the user doesn't exist in Supabase anymore)
+            }
+        }
+
+        // Delete from Prisma
+        await prisma.user.delete({ where: { id } });
+
+        return NextResponse.json({ success: true });
+    } catch (e) {
+        console.error(e);
+        return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 });
+    }
 }
 
 export async function PATCH(req: Request) {

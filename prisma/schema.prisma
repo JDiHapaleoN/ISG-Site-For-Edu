@@ -9,67 +9,49 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(uuid())
-  email         String    @unique
-  name          String?
-  targetIelts   Float?    
-  targetTestDaf String?   
-  
-  // Security & Moderation
-  isBanned      Boolean   @default(false)
-  banReason     String?
-  
-  // Reader Persistence
+  id                     String           @id @default(uuid())
+  email                  String           @unique
+  name                   String?
+  targetIelts            Float?
+  targetTestDaf          String?
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
+  activeReaderModule     String?
   activeReaderText       String?
-  activeReaderModule     String?   // 'english' | 'german'
-  activeReaderHighlights Int[]     @default([])
-
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  lastActive    DateTime? @default(now())
-  
-  // Customization
-  avatarUrl     String?
-  bannerColor   String?   @default("#6366f1") // Indigo-500 default
-  
-  // Friend System
-  friendCode    String?   @unique
-  friendshipsAsUser1 Friendship[] @relation("friendshipUser1")
-  friendshipsAsUser2 Friendship[] @relation("friendshipUser2")
-  messagesSent       Message[]    @relation("messagesSent")
-  messagesReceived   Message[]    @relation("messagesReceived")
-  
-  // Isolated Relations mapping
-  englishDecks    EnglishDeck[]
-  germanDecks     GermanDeck[]
-  mathLogs        MathLog[]
-  englishSessions EnglishSession[]
-  germanSessions  GermanSession[]
-  mathSessions    MathSession[]
-  practiceLogs    PracticeLog[]
-  savedTexts      SavedText[]
-  organizerTasks  OrganizerTask[]
-  organizerHabits OrganizerHabit[]
-  englishWords    EnglishWord[]
-  germanWords     GermanWord[]
-  systemLogs      SystemLog[]
+  avatarUrl              String?
+  bannerColor            String?          @default("#6366f1")
+  activeReaderHighlights Int[]            @default([])
+  friendCode             String?          @unique
+  lastActive             DateTime?        @default(now())
+  englishDecks           EnglishDeck[]
+  englishSessions        EnglishSession[]
+  englishWords           EnglishWord[]
+  friendshipsAsUser1     Friendship[]     @relation("friendshipUser1")
+  friendshipsAsUser2     Friendship[]     @relation("friendshipUser2")
+  germanDecks            GermanDeck[]
+  germanSessions         GermanSession[]
+  germanWords            GermanWord[]
+  mathLogs               MathLog[]
+  mathSessions           MathSession[]
+  messagesReceived       Message[]        @relation("messagesReceived")
+  messagesSent           Message[]        @relation("messagesSent")
+  organizerHabits        OrganizerHabit[]
+  organizerTasks         OrganizerTask[]
+  practiceLogs           PracticeLog[]
+  savedTexts             SavedText[]
+  systemLogs             SystemLog[]
 }
-
-// ============================================
-// FRIEND SYSTEM & CHAT
-// ============================================
 
 model Friendship {
   id        String   @id @default(uuid())
   user1Id   String
   user2Id   String
-  status    String   @default("pending") // 'pending' | 'accepted' | 'blocked'
+  status    String   @default("pending")
   createdAt DateTime @default(now())
-
   user1     User     @relation("friendshipUser1", fields: [user1Id], references: [id], onDelete: Cascade)
   user2     User     @relation("friendshipUser2", fields: [user2Id], references: [id], onDelete: Cascade)
 
-  @@unique([user1Id, user2Id]) // Ensure no duplicate requests
+  @@unique([user1Id, user2Id])
 }
 
 model Message {
@@ -79,175 +61,142 @@ model Message {
   content    String
   read       Boolean  @default(false)
   createdAt  DateTime @default(now())
-
-  sender     User     @relation("messagesSent", fields: [senderId], references: [id], onDelete: Cascade)
   receiver   User     @relation("messagesReceived", fields: [receiverId], references: [id], onDelete: Cascade)
+  sender     User     @relation("messagesSent", fields: [senderId], references: [id], onDelete: Cascade)
 }
 
 model SavedText {
-  id        String   @id @default(uuid())
-  userId    String
+  id         String   @id @default(uuid())
+  userId     String
   title      String
   content    String
-  module     String   // 'english' | 'german'
-  highlights Int[]    @default([])
+  module     String
   createdAt  DateTime @default(now())
-
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  highlights Int[]    @default([])
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-// ============================================
-// ENGLISH MODULE (L2: English, L1: Russian)
-// ============================================
-
 model EnglishDeck {
-  id          String   @id @default(uuid())
+  id          String        @id @default(uuid())
   userId      String
   name        String
   description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   words       EnglishWord[]
 }
 
 model EnglishWord {
-  id             String   @id @default(uuid())
-  userId         String
-  deckId         String
-  term           String   // English word
-  translation    String?  // Russian translation
-  transcription  String?  // IPA
-  context        String?  // English sentence
-  contextTranslation String? // Russian translation of context
-  mnemonic       String?  // Russian mnemonic
-  partOfSpeech   String?
-  clozeSentence  String?
-
-  // SRS (SuperMemo-2) tracking
-  nextReview         DateTime  @default(now())
-  interval           Float     @default(0)   // Days until next review (supports fractional for minutes)
-  easiness           Float     @default(2.5) // SM-2 Easiness factor
-  srsStep            Int       @default(0)   // Exact number of successful reps
-  
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  deck           EnglishDeck @relation(fields: [deckId], references: [id], onDelete: Cascade)
-  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                 String      @id @default(uuid())
+  userId             String
+  deckId             String
+  term               String
+  translation        String?
+  transcription      String?
+  context            String?
+  contextTranslation String?
+  mnemonic           String?
+  partOfSpeech       String?
+  clozeSentence      String?
+  nextReview         DateTime    @default(now())
+  interval           Float       @default(0)
+  easiness           Float       @default(2.5)
+  srsStep            Int         @default(0)
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  deck               EnglishDeck @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  user               User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model EnglishSession {
-  id           String   @id @default(uuid())
+  id           String    @id @default(uuid())
   userId       String
-  startTime    DateTime @default(now())
+  startTime    DateTime  @default(now())
   endTime      DateTime?
-  durationMins Int?     
+  durationMins Int?
   focusScore   Int?
-  
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-// ============================================
-// GERMAN MODULE (L2: German, L1: Russian)
-// ============================================
-
 model GermanDeck {
-  id          String   @id @default(uuid())
+  id          String       @id @default(uuid())
   userId      String
   name        String
   description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   words       GermanWord[]
 }
 
 model GermanWord {
-  id             String   @id @default(uuid())
-  userId         String
-  deckId         String
-  term           String   // German word
-  article        String?  // der/die/das
-  pluralForm     String?  // Plural ending/form
-  translation    String?  // Russian translation
-  context        String?  // German sentence
-  contextTranslation String? // Russian translation of context
-  mnemonic       String?  // Russian mnemonic
-  partOfSpeech   String?
-  clozeSentence  String?
-
-  // SRS (SuperMemo-2) tracking
-  nextReview         DateTime  @default(now())
-  interval           Float     @default(0)
-  easiness           Float     @default(2.5)
-  srsStep            Int       @default(0)
-  
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  deck           GermanDeck @relation(fields: [deckId], references: [id], onDelete: Cascade)
-  user           User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                 String     @id @default(uuid())
+  userId             String
+  deckId             String
+  term               String
+  article            String?
+  pluralForm         String?
+  translation        String?
+  context            String?
+  contextTranslation String?
+  mnemonic           String?
+  partOfSpeech       String?
+  clozeSentence      String?
+  nextReview         DateTime   @default(now())
+  interval           Float      @default(0)
+  easiness           Float      @default(2.5)
+  srsStep            Int        @default(0)
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+  deck               GermanDeck @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  user               User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model GermanSession {
-  id           String   @id @default(uuid())
+  id           String    @id @default(uuid())
   userId       String
-  startTime    DateTime @default(now())
+  startTime    DateTime  @default(now())
   endTime      DateTime?
-  durationMins Int?     
+  durationMins Int?
   focusScore   Int?
-  
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-// ============================================
-// MATHEMATICS MODULE (L1: Russian Only)
-// ============================================
-
 model MathLog {
-  id          String   @id @default(uuid())
-  userId      String
-  topic       String   // e.g., "Математический анализ", "Линейная алгебра"
-  theorem     String?
-  problem     String   // LaTeX representation 
-  solution    String   // LaTeX step-by-step
-  errorType   String   // e.g., "Вычислительная ошибка", "Концептуальная"
-  recurring   Boolean  @default(false)
-  createdAt   DateTime @default(now())
-
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String   @id @default(uuid())
+  userId    String
+  topic     String
+  theorem   String?
+  problem   String
+  solution  String
+  errorType String
+  recurring Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model MathSession {
-  id           String   @id @default(uuid())
+  id           String    @id @default(uuid())
   userId       String
-  startTime    DateTime @default(now())
+  startTime    DateTime  @default(now())
   endTime      DateTime?
-  durationMins Int?     
+  durationMins Int?
   focusScore   Int?
-  
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
-
-// ============================================
-// SHARED UTILITIES
-// ============================================
 
 model PracticeLog {
   id          String   @id @default(uuid())
   userId      String
-  module      String   // 'english' | 'german' | 'math'
-  type        String   // 'writing_ielts' | 'feynman_explanation'
+  module      String
+  type        String
   topic       String
-  userInput   String   // Text or transcription submitted
-  aiFeedback  String   // JSON or text from OpenAI
-  score       Float?   // Band score or internal grade
+  userInput   String
+  aiFeedback  String
+  score       Float?
   timeSpentMs Int?
   createdAt   DateTime @default(now())
-
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
@@ -262,12 +211,12 @@ model MathTerm {
 }
 
 model Algorithm {
-  id          String   @id @default(uuid())
+  id          String          @id @default(uuid())
   title       String
   description String?
   formula     String?
+  createdAt   DateTime        @default(now())
   steps       AlgorithmStep[]
-  createdAt   DateTime @default(now())
 }
 
 model AlgorithmStep {
@@ -279,19 +228,14 @@ model AlgorithmStep {
   algorithm   Algorithm @relation(fields: [algorithmId], references: [id], onDelete: Cascade)
 }
 
-// ============================================
-// ORGANIZER MODULE
-// ============================================
-
 model OrganizerTask {
   id        String    @id @default(uuid())
   userId    String
   text      String
   completed Boolean   @default(false)
-  priority  String    @default("medium") // 'high' | 'medium' | 'low'
+  priority  String    @default("medium")
   deadline  DateTime?
   createdAt DateTime  @default(now())
-
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
@@ -299,21 +243,16 @@ model OrganizerHabit {
   id             String   @id @default(uuid())
   userId         String
   name           String
-  completedDates String   @default("[]") // JSON array of YYYY-MM-DD strings
+  completedDates String   @default("[]")
   createdAt      DateTime @default(now())
-
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
-
-// ============================================
-// ANALYTICS
-// ============================================
 
 model AnalyticsEvent {
   id        String   @id @default(uuid())
   userId    String?
-  event     String   // e.g., 'srs_card_reviewed', 'wizard_completed'
-  metadata  Json?    // Arbitrary event-specific data
+  event     String
+  metadata  Json?
   createdAt DateTime @default(now())
 
   @@index([event])
@@ -321,15 +260,11 @@ model AnalyticsEvent {
   @@index([createdAt])
 }
 
-// ============================================
-// SYSTEM CACHES
-// ============================================
-
 model TranslationCache {
   id              String   @id @default(uuid())
   word            String
-  module          String   // 'english' | 'german'
-  translationData String   // JSON string of the translation
+  module          String
+  translationData String
   createdAt       DateTime @default(now())
 
   @@unique([word, module])
@@ -340,7 +275,7 @@ model Broadcast {
   id        String   @id @default(uuid())
   title     String
   content   String
-  type      String   @default("info") // 'info' | 'warning' | 'urgent'
+  type      String   @default("info")
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -348,14 +283,13 @@ model Broadcast {
 
 model SystemLog {
   id        String   @id @default(uuid())
-  level     String   // 'info' | 'warn' | 'error' | 'success'
+  level     String
   message   String
-  context   String?  // e.g. 'AdminAction', 'TranslationAPI', 'Auth'
+  context   String?
   userId    String?
-  metadata  Json?    // Extra data like oldVal/newVal or error stack
+  metadata  Json?
   createdAt DateTime @default(now())
-
-  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user      User?    @relation(fields: [userId], references: [id])
 
   @@index([level])
   @@index([context])

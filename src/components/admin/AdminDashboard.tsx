@@ -99,28 +99,41 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         try {
             if (activeTab === "dashboard") {
                 const res = await fetch('/api/admin/stats');
-                setStats(await res.json());
-                // Also fetch logs for activity feed
+                const data = await res.json();
+                if (!data.error) setStats(data);
+
                 const logsRes = await fetch('/api/admin/logs?limit=10');
-                setLogs(await logsRes.json());
+                const logsData = await logsRes.json();
+                if (Array.isArray(logsData)) setLogs(logsData);
             } else if (activeTab === "users") {
                 const res = await fetch('/api/admin/users');
-                setUsers(await res.json());
+                const data = await res.json();
+                if (Array.isArray(data)) setUsers(data);
+                else setUsers([]);
             } else if (activeTab === "dictionary") {
                 const res = await fetch(`/api/admin/dictionary?module=${moduleFilter}`);
-                setWords(await res.json());
+                const data = await res.json();
+                if (Array.isArray(data)) setWords(data);
+                else setWords([]);
             } else if (activeTab === "cache") {
                 const res = await fetch('/api/admin/cache');
-                setCache(await res.json());
+                const data = await res.json();
+                if (Array.isArray(data)) setCache(data);
+                else setCache([]);
             } else if (activeTab === "broadcasts") {
                 const res = await fetch('/api/admin/broadcast');
-                setBroadcasts(await res.json());
+                const data = await res.json();
+                if (Array.isArray(data)) setBroadcasts(data);
+                else setBroadcasts([]);
             } else if (activeTab === "logs") {
                 const res = await fetch('/api/admin/logs');
-                setLogs(await res.json());
+                const data = await res.json();
+                if (Array.isArray(data)) setLogs(data);
+                else setLogs([]);
             } else if (activeTab === "system") {
                 const res = await fetch('/api/admin/system');
-                setSystemInfo(await res.json());
+                const data = await res.json();
+                if (!data.error) setSystemInfo(data);
             }
         } catch (e) {
             console.error("Fetch error:", e);
@@ -1285,7 +1298,7 @@ function GoalProgress({ label, count, total, color }: { label: string, count: nu
 function SkeletonRow() {
     return (
         <tr>
-            <td colSpan={10} className="p-6">
+            <td colSpan={5} className="p-6">
                 <div className="h-4 bg-zinc-100 dark:bg-zinc-800 rounded-full animate-pulse w-full"></div>
             </td>
         </tr>
