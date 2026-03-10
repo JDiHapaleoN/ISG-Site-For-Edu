@@ -219,7 +219,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
             {/* Sidebar */}
             <aside className={`
-                fixed lg:sticky top-0 z-50 w-72 h-screen bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 transition-transform duration-300 transform 
+                fixed lg:fixed lg:top-16 lg:left-0 z-50 w-72 h-[calc(100vh-4rem)] bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 transition-transform duration-300 transform 
                 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
             `}>
                 <div className="flex flex-col h-full p-6">
@@ -263,7 +263,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 overflow-x-hidden p-4 md:p-8 lg:p-12">
+            <main className="flex-1 lg:ml-72 overflow-x-hidden p-4 md:p-8 lg:p-12">
                 <header className="mb-10">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div>
