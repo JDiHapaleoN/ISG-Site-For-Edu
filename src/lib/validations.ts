@@ -16,6 +16,7 @@ const baseWordSchema = z.object({
     contextTranslation: z.string().max(2000).optional().nullable(),
     mnemonic: z.string().max(1000).optional().nullable(),
     partOfSpeech: z.string().max(50).optional().nullable(),
+    topic: z.string().max(100).optional().nullable(),
 });
 
 export const englishWordSchema = baseWordSchema.extend({

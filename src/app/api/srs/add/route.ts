@@ -76,6 +76,7 @@ export async function POST(req: Request) {
                     contextTranslation: wordData.contextTranslation,
                     mnemonic: wordData.mnemonic,
                     partOfSpeech: wordData.partOfSpeech,
+                    topic: wordData.topic,
                 },
             });
 
@@ -106,6 +107,7 @@ export async function POST(req: Request) {
                     contextTranslation: wordData.contextTranslation,
                     mnemonic: wordData.mnemonic,
                     partOfSpeech: wordData.partOfSpeech,
+                    topic: wordData.topic,
                 },
             });
 

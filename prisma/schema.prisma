@@ -100,6 +100,7 @@ model EnglishWord {
   contextTranslation String?
   mnemonic           String?
   partOfSpeech       String?
+  topic              String?
   clozeSentence      String?
   nextReview         DateTime    @default(now())
   interval           Float       @default(0)
@@ -144,6 +145,7 @@ model GermanWord {
   contextTranslation String?
   mnemonic           String?
   partOfSpeech       String?
+  topic              String?
   clozeSentence      String?
   nextReview         DateTime   @default(now())
   interval           Float      @default(0)

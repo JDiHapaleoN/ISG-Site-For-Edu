@@ -37,6 +37,8 @@ export const viewport = {
     themeColor: "#6366f1",
 };
 
+import Footer from "@/components/layout/Footer";
+
 export default function RootLayout({
     children,
 }: Readonly<{
@@ -52,10 +54,12 @@ export default function RootLayout({
                             className="min-h-[100dvh] flex flex-col w-full max-w-[100vw] overflow-x-hidden"
                             style={{
                                 paddingTop: "calc(env(safe-area-inset-top) + 4rem)",
-                                paddingBottom: "calc(env(safe-area-inset-bottom) + 1rem)"
                             }}
                         >
-                            {children}
+                            <main className="flex-1">
+                                {children}
+                            </main>
+                            <Footer />
                         </div>
                         <Toaster position="top-center" richColors theme="system" />
                     </TimerProvider>
